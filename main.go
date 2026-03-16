@@ -7,16 +7,16 @@ import (
 	tea "charm.land/bubbletea/v2"
 
 	"github.com/frederickbeaulieu/tuitui/internal/app"
+	"github.com/frederickbeaulieu/tuitui/internal/cli"
 	"github.com/frederickbeaulieu/tuitui/internal/jj"
 )
 
-func main() {
-	repoPath := ""
-	if len(os.Args) > 1 {
-		repoPath = os.Args[1]
-	}
+var version = "dev"
 
-	runner := jj.NewRunner(repoPath)
+func main() {
+	args := cli.Parse(version)
+
+	runner := jj.NewRunner(args.RepoPath)
 
 	_, err := runner.Run("root")
 	if err != nil {
