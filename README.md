@@ -47,38 +47,21 @@ tuitui /path/to/repo
 
 ## Keybindings
 
-### Log panel
-
 | Key | Action |
 |---|---|
-| `j` / `k` | Navigate commits |
-| `ctrl+u` / `ctrl+d` | Half-page up / down |
-| `g` / `G` | Jump to top / bottom |
-| `l` | Open file list for selected commit |
-| `r` | Refresh |
 | `q` / `ctrl+c` | Quit |
+| `h` | Back |
+| `l` | Open |
+| `j` / `k` | Navigate / scroll |
+| `ctrl+d` / `ctrl+u` | Half-page down / up |
+| `g` / `G` | Jump to top / bottom |
 
-### Files panel
+### Diff panel extras
 
 | Key | Action |
 |---|---|
-| `j` / `k` | Navigate files |
-| `ctrl+u` / `ctrl+d` | Half-page up / down |
-| `g` / `G` | Jump to top / bottom |
-| `l` | Open diff for selected file |
-| `h` | Back to log |
-
-### Diff panel
-
-| Key | Action |
-|---|---|
-| `j` / `k` | Scroll |
-| `ctrl+u` / `ctrl+d` | Half-page up / down |
-| `g` / `G` | Jump to top / bottom |
-| `/` | Toggle side-by-side / inline |
-| `c` | Toggle full file / changes only |
-| `r` | Refresh |
-| `h` | Back to files |
+| `s` | Toggle side-by-side / inline |
+| `z` | Toggle full file / changes only |
 
 ## Contributing
 

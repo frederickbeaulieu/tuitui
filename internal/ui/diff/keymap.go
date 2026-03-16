@@ -7,31 +7,19 @@ import (
 )
 
 type KeyMap struct {
-	common.NavigationKeyMap
-	Close         key.Binding
-	Refresh       key.Binding
+	common.KeyMap
 	ToggleLayout  key.Binding
 	ToggleContext key.Binding
 }
 
 func DefaultKeyMap() KeyMap {
 	return KeyMap{
-		NavigationKeyMap: common.DefaultNavigationKeyMap(),
-		Close: key.NewBinding(
-			key.WithKeys("h"),
-			key.WithHelp("h", "back"),
-		),
-		Refresh: key.NewBinding(
-			key.WithKeys("r"),
-			key.WithHelp("r", "refresh"),
-		),
+		KeyMap: common.DefaultKeyMap(),
 		ToggleLayout: key.NewBinding(
-			key.WithKeys("/"),
-			key.WithHelp("/", "toggle split/inline"),
+			key.WithKeys("s"),
 		),
 		ToggleContext: key.NewBinding(
-			key.WithKeys("c"),
-			key.WithHelp("c", "toggle full file/changes"),
+			key.WithKeys("z"),
 		),
 	}
 }

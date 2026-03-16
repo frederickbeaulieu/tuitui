@@ -36,7 +36,7 @@ type Model struct {
 	width        int
 	height       int
 	focused      bool
-	keymap       KeyMap
+	keymap       common.KeyMap
 	err          error
 	prevChangeID string
 }
@@ -46,7 +46,7 @@ func New(runner *jj.Runner, watcher *jj.RepoWatcher) Model {
 		runner:  runner,
 		watcher: watcher,
 		focused: true,
-		keymap:  DefaultKeyMap(),
+		keymap:  common.DefaultKeyMap(),
 	}
 }
 
@@ -142,10 +142,7 @@ func (m Model) handleKey(msg tea.KeyPressMsg) (Model, tea.Cmd) {
 		}
 		return m, m.emitCursorChanged()
 
-	case key.Matches(msg, m.keymap.Refresh):
-		return m, m.fetchEntries()
-
-	case key.Matches(msg, m.keymap.Select):
+	case key.Matches(msg, m.keymap.Open):
 		id := m.SelectedChangeID()
 		if id != "" {
 			return m, func() tea.Msg {

@@ -35,13 +35,13 @@ type Model struct {
 	focused  bool
 	loading  bool
 	err      error
-	keymap   KeyMap
+	keymap   common.KeyMap
 }
 
 func New(runner *jj.Runner) Model {
 	return Model{
 		runner: runner,
-		keymap: DefaultKeyMap(),
+		keymap: common.DefaultKeyMap(),
 	}
 }
 
@@ -162,7 +162,7 @@ func (m Model) handleKey(msg tea.KeyPressMsg) (Model, tea.Cmd) {
 		}
 		return m, nil
 
-	case key.Matches(msg, m.keymap.Select):
+	case key.Matches(msg, m.keymap.Open):
 		if f := m.SelectedFile(); f != nil {
 			return m, func() tea.Msg {
 				return FileSelectedMsg{ChangeID: m.changeID, Path: f.Path}

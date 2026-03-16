@@ -139,11 +139,8 @@ func (m Model) handleKey(msg tea.KeyPressMsg) (Model, tea.Cmd) {
 	maxOffset := m.maxOffset()
 
 	switch {
-	case key.Matches(msg, m.keymap.Close):
+	case key.Matches(msg, m.keymap.Back):
 		return m, func() tea.Msg { return DiffCloseMsg{} }
-
-	case key.Matches(msg, m.keymap.Refresh):
-		return m, m.Refresh()
 
 	case key.Matches(msg, m.keymap.ToggleLayout):
 		if m.layout == inline {

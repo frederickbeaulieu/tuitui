@@ -24,19 +24,6 @@ const (
 	modeDiff
 )
 
-type KeyMap struct {
-	Quit key.Binding
-}
-
-func DefaultKeyMap() KeyMap {
-	return KeyMap{
-		Quit: key.NewBinding(
-			key.WithKeys("q", "ctrl+c"),
-			key.WithHelp("q", "quit"),
-		),
-	}
-}
-
 // Model is the root Bubble Tea model.
 type Model struct {
 	log    logpanel.Model
@@ -45,7 +32,7 @@ type Model struct {
 	mode   mode
 	width  int
 	height int
-	keymap KeyMap
+	keymap common.KeyMap
 }
 
 func New(runner *jj.Runner, watcher *jj.RepoWatcher) Model {
@@ -54,7 +41,7 @@ func New(runner *jj.Runner, watcher *jj.RepoWatcher) Model {
 		files:  files.New(runner),
 		diff:   diff.New(runner),
 		mode:   modeLog,
-		keymap: DefaultKeyMap(),
+		keymap: common.DefaultKeyMap(),
 	}
 }
 
@@ -251,18 +238,17 @@ func (m Model) renderStatusBar() string {
 	switch m.mode {
 	case modeLog:
 		binds = append(binds,
+			bind{"l", "open"},
 			bind{"j/k", "navigate"},
-			bind{"l", "open files"},
 			bind{"C-d/C-u", "half page"},
 			bind{"g/G", "top/bottom"},
-			bind{"r", "refresh"},
 		)
 
 	case modeFiles:
 		binds = append(binds,
-			bind{"j/k", "navigate"},
-			bind{"l", "open diff"},
 			bind{"h", "back"},
+			bind{"l", "open"},
+			bind{"j/k", "navigate"},
 			bind{"C-d/C-u", "half page"},
 			bind{"g/G", "top/bottom"},
 		)
@@ -277,9 +263,8 @@ func (m Model) renderStatusBar() string {
 			bind{"j/k", "scroll"},
 			bind{"C-d/C-u", "half page"},
 			bind{"g/G", "top/bottom"},
-			bind{"/", "split/inline"},
-			bind{"c", contextLabel},
-			bind{"r", "refresh"},
+			bind{"s", "split/inline"},
+			bind{"z", contextLabel},
 		)
 	}
 
