@@ -1,0 +1,43 @@
+# Binary
+tuitui
+
+# Go build artifacts
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+*.test
+*.out
+vendor/
+
+# Test coverage
+coverage.out
+coverage.html
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+
+# Environment
+.env
+.env.*
+
+# Debug
+debug.log
+*.log
+
+# Build output
+dist/
+
+# Tooling
+.opencode/
+
+# Internal planning docs
+.planning/
