@@ -19,11 +19,27 @@ A terminal user interface for [Jujutsu (jj)](https://github.com/jj-vcs/jj) versi
 
 ## Install
 
+### Homebrew (macOS)
+
+```sh
+brew install frederickbeaulieu/tap/tuitui
+```
+
+### Go
+
 ```sh
 go install github.com/frederickbeaulieu/tuitui@latest
 ```
 
-Or build from source:
+### Download a binary
+
+Pre-built binaries for Linux, macOS, and Windows are available on the
+[Releases](https://github.com/frederickbeaulieu/tuitui/releases) page.
+
+Download the archive for your platform, extract it, and place the `tuitui`
+binary somewhere on your `PATH`.
+
+### Build from source
 
 ```sh
 git clone https://github.com/frederickbeaulieu/tuitui.git
