@@ -30,7 +30,6 @@ archives:
 checksum:
   name_template: >-
     {{ .ProjectName }}_{{ .Version }}_checksums.txt
-  split: true
 
 changelog:
   sort: asc
