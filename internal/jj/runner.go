@@ -1,3 +1,4 @@
+// Package jj wraps the jj CLI for log, diff, and repository operations.
 package jj
 
 import (

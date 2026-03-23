@@ -1,3 +1,4 @@
+// Package app implements the root Bubble Tea model and panel orchestration.
 package app
 
 import (
@@ -226,51 +227,22 @@ func (m Model) renderStatusBar() string {
 
 	sep := sepStyle.Render("  |  ")
 
-	type bind struct {
-		key  string
-		desc string
-	}
-
-	binds := []bind{
-		{"q", "quit"},
+	binds := []key.Help{
+		m.keymap.Quit.Help(),
 	}
 
 	switch m.mode {
 	case modeLog:
-		binds = append(binds,
-			bind{"l", "open"},
-			bind{"j/k", "navigate"},
-			bind{"C-d/C-u", "half page"},
-			bind{"g/G", "top/bottom"},
-		)
-
+		binds = append(binds, m.log.StatusBinds()...)
 	case modeFiles:
-		binds = append(binds,
-			bind{"h", "back"},
-			bind{"l", "open"},
-			bind{"j/k", "navigate"},
-			bind{"C-d/C-u", "half page"},
-			bind{"g/G", "top/bottom"},
-		)
-
+		binds = append(binds, m.files.StatusBinds()...)
 	case modeDiff:
-		contextLabel := "full file"
-		if m.diff.ShowFullFile() {
-			contextLabel = "changes only"
-		}
-		binds = append(binds,
-			bind{"h", "back"},
-			bind{"j/k", "scroll"},
-			bind{"C-d/C-u", "half page"},
-			bind{"g/G", "top/bottom"},
-			bind{"s", "split/inline"},
-			bind{"z", contextLabel},
-		)
+		binds = append(binds, m.diff.StatusBinds()...)
 	}
 
 	var parts []string
 	for i, b := range binds {
-		part := keyStyle.Render(b.key) + descStyle.Render(" "+b.desc)
+		part := keyStyle.Render(b.Key) + descStyle.Render(" "+b.Desc)
 		parts = append(parts, part)
 		if i < len(binds)-1 {
 			parts = append(parts, sep)

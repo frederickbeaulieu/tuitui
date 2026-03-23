@@ -1,3 +1,4 @@
+// Package diff implements the diff panel for viewing file changes.
 package diff
 
 import (
@@ -66,6 +67,10 @@ func (m *Model) Blur() { m.focused = false }
 func (m Model) Focused() bool { return m.focused }
 
 func (m Model) ShowFullFile() bool { return m.showFullFile }
+
+func (m Model) StatusBinds() []key.Help {
+	return m.keymap.StatusBinds(m.showFullFile)
+}
 
 func (m *Model) SetRevisionFile(changeID, path string) tea.Cmd {
 	if changeID == m.changeID && path == m.filePath {

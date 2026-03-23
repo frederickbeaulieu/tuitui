@@ -1,3 +1,4 @@
+// Package files implements the files panel for listing changed files.
 package files
 
 import (
@@ -55,6 +56,15 @@ func (m *Model) Focus() { m.focused = true }
 func (m *Model) Blur() { m.focused = false }
 
 func (m Model) Focused() bool { return m.focused }
+
+func (m Model) StatusBinds() []key.Help {
+	binds := []key.Help{
+		m.keymap.Back.Help(),
+		m.keymap.Open.Help(),
+	}
+	binds = append(binds, m.keymap.NavigationBinds()...)
+	return binds
+}
 
 func (m *Model) SetRevision(changeID string) tea.Cmd {
 	m.changeID = changeID

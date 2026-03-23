@@ -1,3 +1,4 @@
+// Package cli handles command-line argument parsing.
 package cli
 
 import (

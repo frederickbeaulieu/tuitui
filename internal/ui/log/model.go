@@ -1,3 +1,4 @@
+// Package log implements the log panel for the revision graph.
 package log
 
 import (
@@ -9,6 +10,8 @@ import (
 	"github.com/frederickbeaulieu/tuitui/internal/jj"
 	"github.com/frederickbeaulieu/tuitui/internal/ui/common"
 )
+
+const allRevset = "all()"
 
 // LogDataMsg carries log entries from an async fetch.
 type LogDataMsg struct {
@@ -36,7 +39,8 @@ type Model struct {
 	width        int
 	height       int
 	focused      bool
-	keymap       common.KeyMap
+	keymap       KeyMap
+	showAll      bool
 	err          error
 	prevChangeID string
 }
@@ -46,7 +50,7 @@ func New(runner *jj.Runner, watcher *jj.RepoWatcher) Model {
 		runner:  runner,
 		watcher: watcher,
 		focused: true,
-		keymap:  common.DefaultKeyMap(),
+		keymap:  DefaultKeyMap(),
 	}
 }
 
@@ -70,6 +74,12 @@ func (m Model) SelectedChangeID() string {
 		return ""
 	}
 	return m.entries[m.cursor].Commit.ChangeID
+}
+
+func (m Model) ShowAll() bool { return m.showAll }
+
+func (m Model) StatusBinds() []key.Help {
+	return m.keymap.StatusBinds(m.showAll)
 }
 
 func (m Model) Update(msg tea.Msg) (Model, tea.Cmd) {
@@ -142,6 +152,12 @@ func (m Model) handleKey(msg tea.KeyPressMsg) (Model, tea.Cmd) {
 		}
 		return m, m.emitCursorChanged()
 
+	case key.Matches(msg, m.keymap.ToggleRevisions):
+		m.showAll = !m.showAll
+		m.cursor = 0
+		m.offset = 0
+		return m, m.fetchEntries()
+
 	case key.Matches(msg, m.keymap.Open):
 		id := m.SelectedChangeID()
 		if id != "" {
@@ -168,8 +184,12 @@ func (m *Model) emitCursorChanged() tea.Cmd {
 
 func (m Model) fetchEntries() tea.Cmd {
 	runner := m.runner
+	revset := ""
+	if m.showAll {
+		revset = allRevset
+	}
 	return func() tea.Msg {
-		entries, err := runner.LogGraphEntries("")
+		entries, err := runner.LogGraphEntries(revset)
 		return LogDataMsg{Entries: entries, Err: err}
 	}
 }
