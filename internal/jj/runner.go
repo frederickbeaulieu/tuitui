@@ -41,5 +41,9 @@ func (r *Runner) run(color string, args ...string) (string, error) {
 		return "", fmt.Errorf("jj %s: %w\n%s", strings.Join(args, " "), err, stderr.String())
 	}
 
-	return stdout.String(), nil
+	out := stdout.String()
+	if out == "" {
+		out = stderr.String()
+	}
+	return out, nil
 }

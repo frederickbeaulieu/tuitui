@@ -9,6 +9,7 @@ import (
 	"charm.land/lipgloss/v2"
 
 	"github.com/frederickbeaulieu/tuitui/internal/jj"
+	"github.com/frederickbeaulieu/tuitui/internal/ui/cmdbar"
 	"github.com/frederickbeaulieu/tuitui/internal/ui/common"
 	"github.com/frederickbeaulieu/tuitui/internal/ui/diff"
 	"github.com/frederickbeaulieu/tuitui/internal/ui/files"
@@ -30,6 +31,7 @@ type Model struct {
 	log    logpanel.Model
 	files  files.Model
 	diff   diff.Model
+	cmdbar cmdbar.Model
 	mode   mode
 	width  int
 	height int
@@ -41,6 +43,7 @@ func New(runner *jj.Runner, watcher *jj.RepoWatcher) Model {
 		log:    logpanel.New(runner, watcher),
 		files:  files.New(runner),
 		diff:   diff.New(runner),
+		cmdbar: cmdbar.New(runner),
 		mode:   modeLog,
 		keymap: common.DefaultKeyMap(),
 	}
@@ -53,10 +56,30 @@ func (m Model) Init() tea.Cmd {
 func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	var cmds []tea.Cmd
 
+	// Route command bar messages.
+	switch msg.(type) {
+	case cmdbar.CmdResultMsg, cmdbar.CmdCloseMsg:
+		var cmd tea.Cmd
+		m.cmdbar, cmd = m.cmdbar.Update(msg)
+		if cmd != nil {
+			cmds = append(cmds, cmd)
+		}
+	case tea.KeyPressMsg:
+		if m.cmdbar.Active() || m.cmdbar.ShowingError() {
+			var cmd tea.Cmd
+			m.cmdbar, cmd = m.cmdbar.Update(msg)
+			if cmd != nil {
+				cmds = append(cmds, cmd)
+			}
+			return m, tea.Batch(cmds...)
+		}
+	}
+
 	switch msg := msg.(type) {
 	case tea.WindowSizeMsg:
 		m.width = msg.Width
 		m.height = msg.Height
+		m.cmdbar.SetSize(m.width, m.panelHeight()-2)
 		m.layoutPanels()
 		return m, nil
 
@@ -64,6 +87,12 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		switch {
 		case key.Matches(msg, m.keymap.Quit):
 			return m, tea.Quit
+		case key.Matches(msg, m.keymap.Command):
+			cmd := m.cmdbar.Activate()
+			if cmd != nil {
+				cmds = append(cmds, cmd)
+			}
+			return m, tea.Batch(cmds...)
 		}
 
 	case logpanel.LogSelectMsg:
@@ -157,12 +186,27 @@ func (m Model) View() tea.View {
 	panelHeight := m.panelHeight()
 	var content string
 
+	// Error viewer takes over the full screen.
+	if m.cmdbar.ShowingError() {
+		errorContent := m.cmdbar.ErrorView()
+		errorPanel := common.RenderPanel(m.cmdbar.ErrorTitle(), errorContent, m.width, panelHeight, true)
+		statusBar := m.renderErrorStatusBar()
+		content = lipgloss.JoinVertical(lipgloss.Left, errorPanel, statusBar)
+		v := tea.NewView(content)
+		v.AltScreen = true
+		return v
+	}
+
+	bottomBar := m.renderStatusBar()
+	if m.cmdbar.Active() {
+		bottomBar = m.cmdbar.InputView()
+	}
+
 	switch m.mode {
 	case modeLog:
 		logContent := m.log.View()
 		logPanel := common.RenderPanel("Log", logContent, m.width, panelHeight, true)
-		statusBar := m.renderStatusBar()
-		content = lipgloss.JoinVertical(lipgloss.Left, logPanel, statusBar)
+		content = lipgloss.JoinVertical(lipgloss.Left, logPanel, bottomBar)
 
 	case modeFiles:
 		logWidth, filesWidth := m.splitWidths()
@@ -171,14 +215,12 @@ func (m Model) View() tea.View {
 		logPanel := common.RenderPanel("Log", logContent, logWidth, panelHeight, false)
 		filesPanel := common.RenderPanel("Files", filesContent, filesWidth, panelHeight, true)
 		panels := lipgloss.JoinHorizontal(lipgloss.Top, logPanel, filesPanel)
-		statusBar := m.renderStatusBar()
-		content = lipgloss.JoinVertical(lipgloss.Left, panels, statusBar)
+		content = lipgloss.JoinVertical(lipgloss.Left, panels, bottomBar)
 
 	case modeDiff:
 		diffContent := m.diff.View()
 		diffPanel := common.RenderPanel("Diff", diffContent, m.width, panelHeight, true)
-		statusBar := m.renderStatusBar()
-		content = lipgloss.JoinVertical(lipgloss.Left, diffPanel, statusBar)
+		content = lipgloss.JoinVertical(lipgloss.Left, diffPanel, bottomBar)
 	}
 
 	v := tea.NewView(content)
@@ -240,6 +282,31 @@ func (m Model) renderStatusBar() string {
 		binds = append(binds, m.diff.StatusBinds()...)
 	}
 
+	binds = append(binds, m.keymap.Command.Help())
+
+	return m.renderBinds(binds, sep, keyStyle, descStyle)
+}
+
+func (m Model) renderErrorStatusBar() string {
+	keyStyle := lipgloss.NewStyle().
+		Background(common.ColorSurface).
+		Foreground(common.ColorMauve).
+		Bold(true)
+
+	descStyle := lipgloss.NewStyle().
+		Background(common.ColorSurface).
+		Foreground(common.ColorSubtext)
+
+	sepStyle := lipgloss.NewStyle().
+		Background(common.ColorSurface).
+		Foreground(common.ColorOverlay)
+
+	sep := sepStyle.Render("  |  ")
+
+	return m.renderBinds(m.cmdbar.ErrorStatusBinds(), sep, keyStyle, descStyle)
+}
+
+func (m Model) renderBinds(binds []key.Help, sep string, keyStyle, descStyle lipgloss.Style) string {
 	var parts []string
 	for i, b := range binds {
 		part := keyStyle.Render(b.Key) + descStyle.Render(" "+b.Desc)

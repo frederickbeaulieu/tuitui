@@ -44,6 +44,7 @@ type KeyMap struct {
 	HalfDown key.Binding
 	Top      key.Binding
 	Bottom   key.Binding
+	Command  key.Binding
 }
 
 // DefaultKeyMap returns the shared keybindings with their help text.
@@ -84,6 +85,10 @@ func DefaultKeyMap() KeyMap {
 		Bottom: key.NewBinding(
 			key.WithKeys("G"),
 			key.WithHelp("G", "top/bottom"),
+		),
+		Command: key.NewBinding(
+			key.WithKeys(":"),
+			key.WithHelp(":", "command"),
 		),
 	}
 }
