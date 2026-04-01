@@ -107,51 +107,6 @@ func (m Model) Update(msg tea.Msg) (Model, tea.Cmd) {
 
 func (m Model) handleKey(msg tea.KeyPressMsg) (Model, tea.Cmd) {
 	switch {
-	case key.Matches(msg, m.keymap.Up):
-		if m.cursor > 0 {
-			m.cursor--
-			m.ensureVisible()
-		}
-		return m, m.emitCursorChanged()
-
-	case key.Matches(msg, m.keymap.Down):
-		if m.cursor < len(m.entries)-1 {
-			m.cursor++
-			m.ensureVisible()
-		}
-		return m, m.emitCursorChanged()
-
-	case key.Matches(msg, m.keymap.HalfUp):
-		m.cursor -= m.viewportHeight() / 4
-		if m.cursor < 0 {
-			m.cursor = 0
-		}
-		m.ensureVisible()
-		return m, m.emitCursorChanged()
-
-	case key.Matches(msg, m.keymap.HalfDown):
-		m.cursor += m.viewportHeight() / 4
-		if m.cursor >= len(m.entries) {
-			m.cursor = len(m.entries) - 1
-		}
-		if m.cursor < 0 {
-			m.cursor = 0
-		}
-		m.ensureVisible()
-		return m, m.emitCursorChanged()
-
-	case key.Matches(msg, m.keymap.Top):
-		m.cursor = 0
-		m.offset = 0
-		return m, m.emitCursorChanged()
-
-	case key.Matches(msg, m.keymap.Bottom):
-		if len(m.entries) > 0 {
-			m.cursor = len(m.entries) - 1
-			m.ensureVisible()
-		}
-		return m, m.emitCursorChanged()
-
 	case key.Matches(msg, m.keymap.ToggleRevisions):
 		m.showAll = !m.showAll
 		m.cursor = 0
@@ -168,6 +123,12 @@ func (m Model) handleKey(msg tea.KeyPressMsg) (Model, tea.Cmd) {
 		return m, nil
 	}
 
+	maxCursor := len(m.entries) - 1
+	if newCursor, ok := m.keymap.HandleScroll(msg, m.cursor, maxCursor, m.viewportHeight()/4); ok {
+		m.cursor = newCursor
+		m.ensureVisible()
+		return m, m.emitCursorChanged()
+	}
 	return m, nil
 }
 

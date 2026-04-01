@@ -5,6 +5,7 @@ import (
 	"strings"
 
 	"charm.land/bubbles/v2/key"
+	tea "charm.land/bubbletea/v2"
 )
 
 // formatKey converts a key string like "ctrl+u" into "C-u" for display.
@@ -35,16 +36,19 @@ func PairHelp(a, b key.Binding) key.Help {
 
 // KeyMap defines the shared keybindings used across all panels.
 type KeyMap struct {
-	Quit     key.Binding
-	Open     key.Binding
-	Back     key.Binding
-	Up       key.Binding
-	Down     key.Binding
-	HalfUp   key.Binding
-	HalfDown key.Binding
-	Top      key.Binding
-	Bottom   key.Binding
-	Command  key.Binding
+	Quit       key.Binding
+	Open       key.Binding
+	Back       key.Binding
+	Close      key.Binding
+	ClosePanel key.Binding
+	Submit     key.Binding
+	Up         key.Binding
+	Down       key.Binding
+	HalfUp     key.Binding
+	HalfDown   key.Binding
+	Top        key.Binding
+	Bottom     key.Binding
+	Command    key.Binding
 }
 
 // DefaultKeyMap returns the shared keybindings with their help text.
@@ -61,6 +65,17 @@ func DefaultKeyMap() KeyMap {
 		Back: key.NewBinding(
 			key.WithKeys("h"),
 			key.WithHelp("h", "back"),
+		),
+		Close: key.NewBinding(
+			key.WithKeys("esc"),
+			key.WithHelp("esc", "close"),
+		),
+		ClosePanel: key.NewBinding(
+			key.WithKeys("escape", "q"),
+			key.WithHelp("q/esc", "close"),
+		),
+		Submit: key.NewBinding(
+			key.WithKeys("enter"),
 		),
 		Up: key.NewBinding(
 			key.WithKeys("k", "up"),
@@ -111,4 +126,30 @@ func (km KeyMap) ScrollBinds() []key.Help {
 		PairHelp(km.HalfUp, km.HalfDown),
 		PairHelp(km.Top, km.Bottom),
 	}
+}
+
+// HandleScroll matches a key against the scroll bindings and returns the
+// updated position. The halfPage parameter controls how far HalfUp/HalfDown
+// jump (typically height/2 for viewports, or height/4 for multi-line entries).
+// Returns (position, true) if the key was handled.
+func (km KeyMap) HandleScroll(msg tea.KeyPressMsg, pos, maxPos, halfPage int) (int, bool) {
+	switch {
+	case key.Matches(msg, km.Down):
+		return Clamp(pos+1, 0, maxPos), true
+	case key.Matches(msg, km.Up):
+		return Clamp(pos-1, 0, maxPos), true
+	case key.Matches(msg, km.HalfDown):
+		return Clamp(pos+halfPage, 0, maxPos), true
+	case key.Matches(msg, km.HalfUp):
+		return Clamp(pos-halfPage, 0, maxPos), true
+	case key.Matches(msg, km.Top):
+		return 0, true
+	case key.Matches(msg, km.Bottom):
+		return maxPos, true
+	}
+	return pos, false
+}
+
+func Clamp(v, lo, hi int) int {
+	return max(lo, min(v, hi))
 }

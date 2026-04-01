@@ -127,51 +127,6 @@ func (m Model) Update(msg tea.Msg) (Model, tea.Cmd) {
 
 func (m Model) handleKey(msg tea.KeyPressMsg) (Model, tea.Cmd) {
 	switch {
-	case key.Matches(msg, m.keymap.Up):
-		if m.cursor > 0 {
-			m.cursor--
-			m.ensureVisible()
-		}
-		return m, nil
-
-	case key.Matches(msg, m.keymap.Down):
-		if m.cursor < len(m.files)-1 {
-			m.cursor++
-			m.ensureVisible()
-		}
-		return m, nil
-
-	case key.Matches(msg, m.keymap.HalfUp):
-		m.cursor -= m.height / 2
-		if m.cursor < 0 {
-			m.cursor = 0
-		}
-		m.ensureVisible()
-		return m, nil
-
-	case key.Matches(msg, m.keymap.HalfDown):
-		m.cursor += m.height / 2
-		if m.cursor >= len(m.files) {
-			m.cursor = len(m.files) - 1
-		}
-		if m.cursor < 0 {
-			m.cursor = 0
-		}
-		m.ensureVisible()
-		return m, nil
-
-	case key.Matches(msg, m.keymap.Top):
-		m.cursor = 0
-		m.offset = 0
-		return m, nil
-
-	case key.Matches(msg, m.keymap.Bottom):
-		if len(m.files) > 0 {
-			m.cursor = len(m.files) - 1
-			m.ensureVisible()
-		}
-		return m, nil
-
 	case key.Matches(msg, m.keymap.Open):
 		if f := m.SelectedFile(); f != nil {
 			return m, func() tea.Msg {
@@ -186,6 +141,11 @@ func (m Model) handleKey(msg tea.KeyPressMsg) (Model, tea.Cmd) {
 		}
 	}
 
+	maxCursor := len(m.files) - 1
+	if newCursor, ok := m.keymap.HandleScroll(msg, m.cursor, maxCursor, m.height/2); ok {
+		m.cursor = newCursor
+		m.ensureVisible()
+	}
 	return m, nil
 }
 

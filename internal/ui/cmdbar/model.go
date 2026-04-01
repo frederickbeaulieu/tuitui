@@ -109,11 +109,11 @@ func (m Model) handleResult(msg CmdResultMsg) (Model, tea.Cmd) {
 }
 
 func (m Model) handleInputKey(msg tea.KeyPressMsg) (Model, tea.Cmd) {
-	if key.Matches(msg, keyClose) {
+	if key.Matches(msg, m.keymap.Close) {
 		return m.dismiss()
 	}
 
-	if key.Matches(msg, keySubmit) {
+	if key.Matches(msg, m.keymap.Submit) {
 		cmd := strings.TrimSpace(m.input.Value())
 		if cmd == "" {
 			return m.dismiss()
@@ -171,31 +171,15 @@ func (m Model) ErrorStatusBinds() []key.Help {
 }
 
 func (m Model) handleErrorViewerKey(msg tea.KeyPressMsg) (Model, tea.Cmd) {
-	km := m.keymap
-	maxScroll := len(m.lines) - 1
-
-	switch {
-	case key.Matches(msg, keyCloseError):
+	if key.Matches(msg, m.keymap.ClosePanel) {
 		m.showingError = false
 		return m, func() tea.Msg { return CmdCloseMsg{} }
-	case key.Matches(msg, km.Down):
-		m.scroll = clamp(m.scroll+1, 0, maxScroll)
-	case key.Matches(msg, km.Up):
-		m.scroll = clamp(m.scroll-1, 0, maxScroll)
-	case key.Matches(msg, km.HalfDown):
-		m.scroll = clamp(m.scroll+m.height/2, 0, maxScroll)
-	case key.Matches(msg, km.HalfUp):
-		m.scroll = clamp(m.scroll-m.height/2, 0, maxScroll)
-	case key.Matches(msg, km.Top):
-		m.scroll = 0
-	case key.Matches(msg, km.Bottom):
-		m.scroll = maxScroll
+	}
+
+	if newOffset, ok := m.keymap.HandleScroll(msg, m.scroll, len(m.lines)-1, m.height/2); ok {
+		m.scroll = newOffset
 	}
 	return m, nil
-}
-
-func clamp(v, lo, hi int) int {
-	return max(lo, min(v, hi))
 }
 
 // ---------------------------------------------------------------------------

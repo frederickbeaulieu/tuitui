@@ -141,8 +141,6 @@ func (m Model) Update(msg tea.Msg) (Model, tea.Cmd) {
 }
 
 func (m Model) handleKey(msg tea.KeyPressMsg) (Model, tea.Cmd) {
-	maxOffset := m.maxOffset()
-
 	switch {
 	case key.Matches(msg, m.keymap.Back):
 		return m, func() tea.Msg { return DiffCloseMsg{} }
@@ -158,31 +156,11 @@ func (m Model) handleKey(msg tea.KeyPressMsg) (Model, tea.Cmd) {
 	case key.Matches(msg, m.keymap.ToggleContext):
 		m.showFullFile = !m.showFullFile
 		return m, m.Refresh()
-
-	case key.Matches(msg, m.keymap.Up):
-		if m.offset > 0 {
-			m.offset--
-		}
-	case key.Matches(msg, m.keymap.Down):
-		if m.offset < maxOffset {
-			m.offset++
-		}
-	case key.Matches(msg, m.keymap.HalfUp):
-		m.offset -= m.height / 2
-		if m.offset < 0 {
-			m.offset = 0
-		}
-	case key.Matches(msg, m.keymap.HalfDown):
-		m.offset += m.height / 2
-		if m.offset > maxOffset {
-			m.offset = maxOffset
-		}
-	case key.Matches(msg, m.keymap.Top):
-		m.offset = 0
-	case key.Matches(msg, m.keymap.Bottom):
-		m.offset = maxOffset
 	}
 
+	if newOffset, ok := m.keymap.HandleScroll(msg, m.offset, m.maxOffset(), m.height/2); ok {
+		m.offset = newOffset
+	}
 	return m, nil
 }
 
