@@ -1,18 +1,18 @@
 package jj
 
 import (
+	"strings"
 	"time"
 )
 
 // RepoWatcher polls the repository for changes every second,
-// signaling on C when the working copy or operation state changes.
+// signaling on C when the operation state changes.
 type RepoWatcher struct {
-	runner     *Runner
-	C          chan struct{}
-	done       chan struct{}
-	cancel     chan struct{}
-	prevOpID   string
-	prevStatus string
+	runner   *Runner
+	C        chan struct{}
+	done     chan struct{}
+	cancel   chan struct{}
+	prevOpID string
 }
 
 func NewRepoWatcher(runner *Runner) *RepoWatcher {
@@ -23,7 +23,8 @@ func NewRepoWatcher(runner *Runner) *RepoWatcher {
 		cancel: make(chan struct{}),
 	}
 	rw.prevOpID, _ = runner.Run("operation", "log", "--no-graph", "--limit=1", "-T", "self.id()")
-	rw.prevStatus, _ = runner.Run("diff", "--stat", "--from", "root()", "--to", "@")
+	rw.prevOpID = strings.TrimSpace(rw.prevOpID)
+
 	go rw.loop()
 	return rw
 }
@@ -50,23 +51,16 @@ func (rw *RepoWatcher) loop() {
 }
 
 func (rw *RepoWatcher) changed() bool {
-	changed := false
-
-	if opID, err := rw.runner.Run("operation", "log", "--no-graph", "--limit=1", "-T", "self.id()"); err == nil {
-		if opID != rw.prevOpID {
-			rw.prevOpID = opID
-			changed = true
-		}
+	opID, err := rw.runner.Run("operation", "log", "--no-graph", "--limit=1", "-T", "self.id()")
+	if err != nil {
+		return false
 	}
-
-	if status, err := rw.runner.Run("diff", "--stat", "--from", "root()", "--to", "@"); err == nil {
-		if status != rw.prevStatus {
-			rw.prevStatus = status
-			changed = true
-		}
+	opID = strings.TrimSpace(opID)
+	if opID != rw.prevOpID {
+		rw.prevOpID = opID
+		return true
 	}
-
-	return changed
+	return false
 }
 
 func (rw *RepoWatcher) Close() error {
