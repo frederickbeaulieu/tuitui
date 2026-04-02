@@ -2,31 +2,21 @@
 package cmdbar
 
 import (
-	"strings"
-
-	"charm.land/bubbles/v2/key"
 	"charm.land/bubbles/v2/textinput"
 	tea "charm.land/bubbletea/v2"
 	"charm.land/lipgloss/v2"
-	"github.com/google/shlex"
 
 	"github.com/frederickbeaulieu/tuitui/internal/jj"
 	"github.com/frederickbeaulieu/tuitui/internal/ui/common"
 )
 
-// ---------------------------------------------------------------------------
-// Messages
-// ---------------------------------------------------------------------------
-
+// CmdCloseMsg is sent when the command bar is dismissed.
 type CmdCloseMsg struct{}
 
+// CmdResultMsg carries the result of an executed jj command.
 type CmdResultMsg struct {
 	Err error
 }
-
-// ---------------------------------------------------------------------------
-// Model
-// ---------------------------------------------------------------------------
 
 type Model struct {
 	runner *jj.Runner
@@ -81,105 +71,6 @@ func (m Model) Update(msg tea.Msg) (Model, tea.Cmd) {
 		var cmd tea.Cmd
 		m.input, cmd = m.input.Update(msg)
 		return m, cmd
-	}
-	return m, nil
-}
-
-// ---------------------------------------------------------------------------
-// Command input
-// ---------------------------------------------------------------------------
-
-func (m Model) InputView() string {
-	if !m.active {
-		return ""
-	}
-	return m.input.View()
-}
-
-func (m Model) handleResult(msg CmdResultMsg) (Model, tea.Cmd) {
-	m.active = false
-	m.input.Blur()
-	m.scroll = 0
-	if msg.Err != nil {
-		m.lines = strings.Split(msg.Err.Error(), "\n")
-		m.showingError = true
-		return m, nil
-	}
-	m.showingError = false
-	return m, func() tea.Msg { return CmdCloseMsg{} }
-}
-
-func (m Model) handleInputKey(msg tea.KeyPressMsg) (Model, tea.Cmd) {
-	if key.Matches(msg, m.keymap.Close) {
-		return m.dismiss()
-	}
-
-	if key.Matches(msg, m.keymap.Submit) {
-		cmd := strings.TrimSpace(m.input.Value())
-		if cmd == "" {
-			return m.dismiss()
-		}
-		runner := m.runner
-		return m, func() tea.Msg {
-			args, err := shlex.Split(cmd)
-			if err != nil {
-				return CmdResultMsg{Err: err}
-			}
-			_, err = runner.Run(args...)
-			return CmdResultMsg{Err: err}
-		}
-	}
-
-	var c tea.Cmd
-	m.input, c = m.input.Update(msg)
-	return m, c
-}
-
-func (m Model) dismiss() (Model, tea.Cmd) {
-	m.active = false
-	m.input.Blur()
-	return m, func() tea.Msg { return CmdCloseMsg{} }
-}
-
-// ---------------------------------------------------------------------------
-// Error viewer
-// ---------------------------------------------------------------------------
-
-func (m Model) ErrorView() string {
-	if !m.showingError || len(m.lines) == 0 {
-		return ""
-	}
-	visible := m.height
-	if visible <= 0 {
-		visible = 40
-	}
-	end := min(m.scroll+visible, len(m.lines))
-	var b strings.Builder
-	for i := m.scroll; i < end; i++ {
-		if i > m.scroll {
-			b.WriteString("\n")
-		}
-		b.WriteString(m.lines[i])
-	}
-	return b.String()
-}
-
-func (m Model) ErrorTitle() string {
-	return "Error"
-}
-
-func (m Model) ErrorStatusBinds() []key.Help {
-	return errorStatusBinds(m.keymap)
-}
-
-func (m Model) handleErrorViewerKey(msg tea.KeyPressMsg) (Model, tea.Cmd) {
-	if key.Matches(msg, m.keymap.ClosePanel) {
-		m.showingError = false
-		return m, func() tea.Msg { return CmdCloseMsg{} }
-	}
-
-	if newOffset, ok := m.keymap.HandleScroll(msg, m.scroll, len(m.lines)-1, m.height/2); ok {
-		m.scroll = newOffset
 	}
 	return m, nil
 }
