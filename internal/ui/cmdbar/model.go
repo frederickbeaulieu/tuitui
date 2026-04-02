@@ -8,6 +8,7 @@ import (
 	"charm.land/bubbles/v2/textinput"
 	tea "charm.land/bubbletea/v2"
 	"charm.land/lipgloss/v2"
+	"github.com/google/shlex"
 
 	"github.com/frederickbeaulieu/tuitui/internal/jj"
 	"github.com/frederickbeaulieu/tuitui/internal/ui/common"
@@ -120,7 +121,11 @@ func (m Model) handleInputKey(msg tea.KeyPressMsg) (Model, tea.Cmd) {
 		}
 		runner := m.runner
 		return m, func() tea.Msg {
-			_, err := runner.Run(splitArgs(cmd)...)
+			args, err := shlex.Split(cmd)
+			if err != nil {
+				return CmdResultMsg{Err: err}
+			}
+			_, err = runner.Run(args...)
 			return CmdResultMsg{Err: err}
 		}
 	}
@@ -180,39 +185,4 @@ func (m Model) handleErrorViewerKey(msg tea.KeyPressMsg) (Model, tea.Cmd) {
 		m.scroll = newOffset
 	}
 	return m, nil
-}
-
-// ---------------------------------------------------------------------------
-// Utilities
-// ---------------------------------------------------------------------------
-
-func splitArgs(s string) []string {
-	var args []string
-	var cur strings.Builder
-	inQ := false
-	qc := rune(0)
-	for _, r := range s {
-		switch {
-		case inQ:
-			if r == qc {
-				inQ = false
-			} else {
-				cur.WriteRune(r)
-			}
-		case r == '"' || r == '\'':
-			inQ = true
-			qc = r
-		case r == ' ' || r == '\t':
-			if cur.Len() > 0 {
-				args = append(args, cur.String())
-				cur.Reset()
-			}
-		default:
-			cur.WriteRune(r)
-		}
-	}
-	if cur.Len() > 0 {
-		args = append(args, cur.String())
-	}
-	return args
 }
