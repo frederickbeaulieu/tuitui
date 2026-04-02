@@ -2,11 +2,8 @@
 package app
 
 import (
-	"strings"
-
 	"charm.land/bubbles/v2/key"
 	tea "charm.land/bubbletea/v2"
-	"charm.land/lipgloss/v2"
 
 	"github.com/frederickbeaulieu/tuitui/internal/jj"
 	"github.com/frederickbeaulieu/tuitui/internal/ui/cmdbar"
@@ -17,6 +14,7 @@ import (
 )
 
 const statusBarHeight = 1
+const cmdbarHeight = 2
 
 type mode int
 
@@ -26,7 +24,6 @@ const (
 	modeDiff
 )
 
-// Model is the root Bubble Tea model.
 type Model struct {
 	log    logpanel.Model
 	files  files.Model
@@ -56,176 +53,142 @@ func (m Model) Init() tea.Cmd {
 func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	var cmds []tea.Cmd
 
-	// Route command bar messages.
-	switch msg.(type) {
-	case cmdbar.CmdResultMsg, cmdbar.CmdCloseMsg:
-		var cmd tea.Cmd
-		m.cmdbar, cmd = m.cmdbar.Update(msg)
-		if cmd != nil {
-			cmds = append(cmds, cmd)
-		}
-	case tea.KeyPressMsg:
-		if m.cmdbar.Active() || m.cmdbar.ShowingError() {
-			var cmd tea.Cmd
-			m.cmdbar, cmd = m.cmdbar.Update(msg)
-			if cmd != nil {
-				cmds = append(cmds, cmd)
-			}
-			return m, tea.Batch(cmds...)
-		}
+	cmd, handled := m.updateCmdbar(msg)
+	cmds = appendCmd(cmds, cmd)
+	if handled {
+		return m, tea.Batch(cmds...)
 	}
 
 	switch msg := msg.(type) {
 	case tea.WindowSizeMsg:
-		m.width = msg.Width
-		m.height = msg.Height
-		m.cmdbar.SetSize(m.width, m.panelHeight()-2)
-		m.layoutPanels()
-		return m, nil
-
+		return m.handleResize(msg)
 	case tea.KeyPressMsg:
-		switch {
-		case key.Matches(msg, m.keymap.Quit):
-			return m, tea.Quit
-		case key.Matches(msg, m.keymap.Command):
-			cmd := m.cmdbar.Activate()
-			if cmd != nil {
-				cmds = append(cmds, cmd)
-			}
-			return m, tea.Batch(cmds...)
+		if model, cmd, ok := m.handleKey(msg); ok {
+			return model, cmd
 		}
-
 	case logpanel.LogSelectMsg:
-		m.mode = modeFiles
-		m.log.Blur()
-		m.files.Focus()
-		m.diff.Blur()
-		m.layoutPanels()
-		cmd := m.files.SetRevision(msg.ChangeID)
-		if cmd != nil {
-			cmds = append(cmds, cmd)
-		}
-		return m, tea.Batch(cmds...)
-
+		return m.handleLogSelect(msg)
 	case files.FileSelectedMsg:
-		m.mode = modeDiff
-		m.log.Blur()
-		m.files.Blur()
-		m.diff.Focus()
-		m.layoutPanels()
-		cmd := m.diff.SetRevisionFile(msg.ChangeID, msg.Path)
-		if cmd != nil {
-			cmds = append(cmds, cmd)
-		}
-		return m, tea.Batch(cmds...)
-
+		return m.handleFileSelected(msg)
 	case files.FilesCloseMsg:
-		m.mode = modeLog
-		m.log.Focus()
-		m.files.Blur()
-		m.diff.Blur()
-		m.layoutPanels()
-		return m, nil
-
+		return m.handleFilesClose()
 	case diff.DiffCloseMsg:
-		m.mode = modeFiles
-		m.log.Blur()
-		m.files.Focus()
-		m.diff.Blur()
-		m.layoutPanels()
-		return m, nil
-
+		return m.handleDiffClose()
 	case logpanel.CursorChangedMsg:
 		if m.mode == modeFiles && msg.ChangeID != "" {
-			cmd := m.files.SetRevision(msg.ChangeID)
-			if cmd != nil {
-				cmds = append(cmds, cmd)
-			}
+			cmds = appendCmd(cmds, m.files.SetRevision(msg.ChangeID))
 		}
-
 	case logpanel.RepoChangedMsg:
 		if m.mode == modeFiles || m.mode == modeDiff {
-			cmd := m.files.Refresh()
-			if cmd != nil {
-				cmds = append(cmds, cmd)
-			}
+			cmds = appendCmd(cmds, m.files.Refresh())
 		}
 		if m.mode == modeDiff {
-			cmd := m.diff.Refresh()
-			if cmd != nil {
-				cmds = append(cmds, cmd)
-			}
+			cmds = appendCmd(cmds, m.diff.Refresh())
 		}
 	}
 
+	cmds = append(cmds, m.updatePanels(msg)...)
+	return m, tea.Batch(cmds...)
+}
+
+func (m *Model) updateCmdbar(msg tea.Msg) (tea.Cmd, bool) {
+	switch msg.(type) {
+	case cmdbar.CmdResultMsg, cmdbar.CmdCloseMsg, cmdbar.CompletionMsg:
+		var cmd tea.Cmd
+		m.cmdbar, cmd = m.cmdbar.Update(msg)
+		m.layoutPanels()
+		return cmd, false
+	case tea.KeyPressMsg:
+		if m.cmdbar.Active() || m.cmdbar.ShowingError() {
+			var cmd tea.Cmd
+			m.cmdbar, cmd = m.cmdbar.Update(msg)
+			m.layoutPanels()
+			return cmd, true
+		}
+	default:
+		if m.cmdbar.Active() {
+			var cmd tea.Cmd
+			m.cmdbar, cmd = m.cmdbar.Update(msg)
+			return cmd, false
+		}
+	}
+	return nil, false
+}
+
+func (m *Model) handleResize(msg tea.WindowSizeMsg) (Model, tea.Cmd) {
+	m.width = msg.Width
+	m.height = msg.Height
+	m.cmdbar.SetSize(m.width, m.panelHeight()-2)
+	m.layoutPanels()
+	return *m, nil
+}
+
+func (m *Model) handleKey(msg tea.KeyPressMsg) (Model, tea.Cmd, bool) {
+	switch {
+	case key.Matches(msg, m.keymap.Quit):
+		return *m, tea.Quit, true
+	case key.Matches(msg, m.keymap.Command):
+		cmd := m.cmdbar.Activate()
+		m.layoutPanels()
+		return *m, cmd, true
+	}
+	return *m, nil, false
+}
+
+func (m *Model) handleLogSelect(msg logpanel.LogSelectMsg) (Model, tea.Cmd) {
+	m.setMode(modeFiles)
+	return *m, m.files.SetRevision(msg.ChangeID)
+}
+
+func (m *Model) handleFileSelected(msg files.FileSelectedMsg) (Model, tea.Cmd) {
+	m.setMode(modeDiff)
+	return *m, m.diff.SetRevisionFile(msg.ChangeID, msg.Path)
+}
+
+func (m *Model) handleFilesClose() (Model, tea.Cmd) {
+	m.setMode(modeLog)
+	return *m, nil
+}
+
+func (m *Model) handleDiffClose() (Model, tea.Cmd) {
+	m.setMode(modeFiles)
+	return *m, nil
+}
+
+func (m *Model) setMode(newMode mode) {
+	m.mode = newMode
+	m.log.Blur()
+	m.files.Blur()
+	m.diff.Blur()
+	switch newMode {
+	case modeLog:
+		m.log.Focus()
+	case modeFiles:
+		m.files.Focus()
+	case modeDiff:
+		m.diff.Focus()
+	}
+	m.layoutPanels()
+}
+
+func (m *Model) updatePanels(msg tea.Msg) []tea.Cmd {
+	var cmds []tea.Cmd
 	var cmd tea.Cmd
 
 	m.log, cmd = m.log.Update(msg)
-	if cmd != nil {
-		cmds = append(cmds, cmd)
-	}
+	cmds = appendCmd(cmds, cmd)
 
 	if m.mode == modeFiles || m.mode == modeDiff {
 		m.files, cmd = m.files.Update(msg)
-		if cmd != nil {
-			cmds = append(cmds, cmd)
-		}
+		cmds = appendCmd(cmds, cmd)
 	}
 
 	if m.mode == modeDiff {
 		m.diff, cmd = m.diff.Update(msg)
-		if cmd != nil {
-			cmds = append(cmds, cmd)
-		}
+		cmds = appendCmd(cmds, cmd)
 	}
 
-	return m, tea.Batch(cmds...)
-}
-
-func (m Model) View() tea.View {
-	panelHeight := m.panelHeight()
-	var content string
-
-	// Error viewer takes over the full screen.
-	if m.cmdbar.ShowingError() {
-		errorContent := m.cmdbar.ErrorView()
-		errorPanel := common.RenderPanel(m.cmdbar.ErrorTitle(), errorContent, m.width, panelHeight, true)
-		statusBar := m.renderErrorStatusBar()
-		content = lipgloss.JoinVertical(lipgloss.Left, errorPanel, statusBar)
-		v := tea.NewView(content)
-		v.AltScreen = true
-		return v
-	}
-
-	bottomBar := m.renderStatusBar()
-	if m.cmdbar.Active() {
-		bottomBar = m.cmdbar.InputView()
-	}
-
-	switch m.mode {
-	case modeLog:
-		logContent := m.log.View()
-		logPanel := common.RenderPanel("Log", logContent, m.width, panelHeight, true)
-		content = lipgloss.JoinVertical(lipgloss.Left, logPanel, bottomBar)
-
-	case modeFiles:
-		logWidth, filesWidth := m.splitWidths()
-		logContent := m.log.View()
-		filesContent := m.files.View()
-		logPanel := common.RenderPanel("Log", logContent, logWidth, panelHeight, false)
-		filesPanel := common.RenderPanel("Files", filesContent, filesWidth, panelHeight, true)
-		panels := lipgloss.JoinHorizontal(lipgloss.Top, logPanel, filesPanel)
-		content = lipgloss.JoinVertical(lipgloss.Left, panels, bottomBar)
-
-	case modeDiff:
-		diffContent := m.diff.View()
-		diffPanel := common.RenderPanel("Diff", diffContent, m.width, panelHeight, true)
-		content = lipgloss.JoinVertical(lipgloss.Left, diffPanel, bottomBar)
-	}
-
-	v := tea.NewView(content)
-	v.AltScreen = true
-	return v
+	return cmds
 }
 
 func (m Model) splitWidths() (int, int) {
@@ -235,7 +198,12 @@ func (m Model) splitWidths() (int, int) {
 }
 
 func (m Model) panelHeight() int {
-	return max(m.height-statusBarHeight, 3)
+	bottomHeight := statusBarHeight
+	if m.cmdbar.Active() {
+		bottomHeight = cmdbarHeight
+	}
+	availableHeight := m.height - bottomHeight
+	return max(availableHeight-m.cmdbar.CompletionHeight(availableHeight), 3)
 }
 
 func (m *Model) layoutPanels() {
@@ -253,80 +221,9 @@ func (m *Model) layoutPanels() {
 	}
 }
 
-func (m Model) renderStatusBar() string {
-	keyStyle := lipgloss.NewStyle().
-		Background(common.ColorSurface).
-		Foreground(common.ColorMauve).
-		Bold(true)
-
-	descStyle := lipgloss.NewStyle().
-		Background(common.ColorSurface).
-		Foreground(common.ColorSubtext)
-
-	sepStyle := lipgloss.NewStyle().
-		Background(common.ColorSurface).
-		Foreground(common.ColorOverlay)
-
-	sep := sepStyle.Render("  |  ")
-
-	binds := []key.Help{
-		m.keymap.Quit.Help(),
+func appendCmd(cmds []tea.Cmd, cmd tea.Cmd) []tea.Cmd {
+	if cmd != nil {
+		return append(cmds, cmd)
 	}
-
-	switch m.mode {
-	case modeLog:
-		binds = append(binds, m.log.StatusBinds()...)
-	case modeFiles:
-		binds = append(binds, m.files.StatusBinds()...)
-	case modeDiff:
-		binds = append(binds, m.diff.StatusBinds()...)
-	}
-
-	binds = append(binds, m.keymap.Command.Help())
-
-	return m.renderBinds(binds, sep, keyStyle, descStyle)
-}
-
-func (m Model) renderErrorStatusBar() string {
-	keyStyle := lipgloss.NewStyle().
-		Background(common.ColorSurface).
-		Foreground(common.ColorMauve).
-		Bold(true)
-
-	descStyle := lipgloss.NewStyle().
-		Background(common.ColorSurface).
-		Foreground(common.ColorSubtext)
-
-	sepStyle := lipgloss.NewStyle().
-		Background(common.ColorSurface).
-		Foreground(common.ColorOverlay)
-
-	sep := sepStyle.Render("  |  ")
-
-	return m.renderBinds(m.cmdbar.ErrorStatusBinds(), sep, keyStyle, descStyle)
-}
-
-func (m Model) renderBinds(binds []key.Help, sep string, keyStyle, descStyle lipgloss.Style) string {
-	var parts []string
-	for i, b := range binds {
-		part := keyStyle.Render(b.Key) + descStyle.Render(" "+b.Desc)
-		parts = append(parts, part)
-		if i < len(binds)-1 {
-			parts = append(parts, sep)
-		}
-	}
-
-	bar := strings.Join(parts, "")
-
-	barPlain := common.StripAnsi(bar)
-	barVisualLen := common.VisualLen(barPlain)
-	if barVisualLen < m.width {
-		padding := lipgloss.NewStyle().
-			Background(common.ColorSurface).
-			Width(m.width - barVisualLen).
-			Render("")
-		bar = bar + padding
-	}
-
-	return bar
+	return cmds
 }

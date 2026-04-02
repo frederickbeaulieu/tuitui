@@ -36,19 +36,23 @@ func PairHelp(a, b key.Binding) key.Help {
 
 // KeyMap defines the shared keybindings used across all panels.
 type KeyMap struct {
-	Quit       key.Binding
-	Open       key.Binding
-	Back       key.Binding
-	Close      key.Binding
-	ClosePanel key.Binding
-	Submit     key.Binding
-	Up         key.Binding
-	Down       key.Binding
-	HalfUp     key.Binding
-	HalfDown   key.Binding
-	Top        key.Binding
-	Bottom     key.Binding
-	Command    key.Binding
+	Quit           key.Binding
+	Open           key.Binding
+	Back           key.Binding
+	Close          key.Binding
+	ClosePanel     key.Binding
+	Submit         key.Binding
+	Up             key.Binding
+	Down           key.Binding
+	HalfUp         key.Binding
+	HalfDown       key.Binding
+	Top            key.Binding
+	Bottom         key.Binding
+	Command        key.Binding
+	CompleteTab    key.Binding
+	CompleteNext   key.Binding
+	CompletePrev   key.Binding
+	CompleteToggle key.Binding
 }
 
 // DefaultKeyMap returns the shared keybindings with their help text.
@@ -104,6 +108,18 @@ func DefaultKeyMap() KeyMap {
 		Command: key.NewBinding(
 			key.WithKeys(":"),
 			key.WithHelp(":", "command"),
+		),
+		CompleteTab: key.NewBinding(
+			key.WithKeys("tab"),
+		),
+		CompleteNext: key.NewBinding(
+			key.WithKeys("ctrl+n"),
+		),
+		CompletePrev: key.NewBinding(
+			key.WithKeys("ctrl+p"),
+		),
+		CompleteToggle: key.NewBinding(
+			key.WithKeys("ctrl+space"),
 		),
 	}
 }
