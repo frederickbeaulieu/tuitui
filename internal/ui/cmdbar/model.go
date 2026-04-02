@@ -153,10 +153,7 @@ func (m Model) ErrorView() string {
 	if visible <= 0 {
 		visible = 40
 	}
-	end := m.scroll + visible
-	if end > len(m.lines) {
-		end = len(m.lines)
-	}
+	end := min(m.scroll+visible, len(m.lines))
 	var b strings.Builder
 	for i := m.scroll; i < end; i++ {
 		if i > m.scroll {
