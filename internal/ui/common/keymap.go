@@ -71,7 +71,7 @@ func DefaultKeyMap() KeyMap {
 			key.WithHelp("esc", "close"),
 		),
 		ClosePanel: key.NewBinding(
-			key.WithKeys("escape", "q"),
+			key.WithKeys("esc", "q"),
 			key.WithHelp("q/esc", "close"),
 		),
 		Submit: key.NewBinding(
