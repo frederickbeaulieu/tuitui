@@ -63,11 +63,11 @@ func DefaultKeyMap() KeyMap {
 			key.WithHelp("q", "quit"),
 		),
 		Open: key.NewBinding(
-			key.WithKeys("l"),
+			key.WithKeys("l", "right"),
 			key.WithHelp("l", "open"),
 		),
 		Back: key.NewBinding(
-			key.WithKeys("h"),
+			key.WithKeys("h", "left"),
 			key.WithHelp("h", "back"),
 		),
 		Close: key.NewBinding(
