@@ -120,6 +120,9 @@ func (m *Model) handleResize(msg tea.WindowSizeMsg) (Model, tea.Cmd) {
 	m.height = msg.Height
 	m.cmdbar.SetSize(m.width, m.panelHeight()-2)
 	m.layoutPanels()
+	if m.mode == modeDiff {
+		return *m, m.diff.Refresh()
+	}
 	return *m, nil
 }
 
