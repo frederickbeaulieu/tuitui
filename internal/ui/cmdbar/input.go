@@ -38,16 +38,21 @@ func (m Model) handleResult(msg CmdResultMsg) (Model, tea.Cmd) {
 }
 
 func (m Model) handleInputKey(msg tea.KeyPressMsg) (Model, tea.Cmd) {
+	hasCompletions := m.completion.visible && len(m.completion.items) > 0
+
 	switch {
 	case key.Matches(msg, m.keymap.CompleteToggle):
 		return m.handleCompleteToggle()
 	case key.Matches(msg, m.keymap.Close):
 		return m.dismiss()
-	case key.Matches(msg, m.keymap.CompleteTab):
+	case key.Matches(msg, m.keymap.CompleteTab),
+		hasCompletions && msg.Code == tea.KeyRight:
 		return m.handleCompleteTab()
-	case key.Matches(msg, m.keymap.CompleteNext):
+	case key.Matches(msg, m.keymap.CompleteNext),
+		hasCompletions && msg.Code == tea.KeyDown:
 		return m.handleCompleteNext()
-	case key.Matches(msg, m.keymap.CompletePrev):
+	case key.Matches(msg, m.keymap.CompletePrev),
+		hasCompletions && msg.Code == tea.KeyUp:
 		return m.handleCompletePrev()
 	case key.Matches(msg, m.keymap.Submit):
 		return m.handleSubmit()

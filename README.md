@@ -72,25 +72,25 @@ tuitui --version
 
 | Key | Action |
 |---|---|
-| `q` / `ctrl+c` | Quit |
-| `h` / `left` | Back |
-| `l` / `right` | Open |
-| `j` / `k` / `up` / `down` | Navigate / scroll |
-| `ctrl+d` / `ctrl+u` | Half-page down / up |
-| `g` / `G` | Jump to top / bottom |
+| `q` or `ctrl+c` | Quit |
+| `h` or `left` | Back |
+| `l` or `right` | Open |
+| `j`/`k` or `up`/`down` | Navigate / scroll |
+| `ctrl+d`/`ctrl+u` | Half-page down/up |
+| `g`/`G` | Jump to top/bottom |
 
 ### Log panel
 
 | Key | Action |
 |---|---|
-| `z` | Toggle all revisions / current tree |
+| `z` | Toggle all revisions/current tree |
 
 ### Diff panel
 
 | Key | Action |
 |---|---|
-| `s` | Toggle side-by-side / inline |
-| `z` | Toggle full file / changes only |
+| `s` | Toggle side-by-side/inline |
+| `z` | Toggle full file/changes only |
 
 ### Command bar
 
@@ -99,8 +99,8 @@ Open with `:` to run any jj command. Completions appear automatically as you typ
 | Key | Action |
 |---|---|
 | `:` | Open command bar |
-| `tab` | Accept completion |
-| `ctrl+n` / `ctrl+p` | Navigate suggestions |
+| `tab` or `right` | Accept completion |
+| `ctrl+n`/`ctrl+p` or `up`/`down` | Navigate suggestions |
 | `ctrl+space` | Toggle suggestions dropdown |
 | `enter` | Run command |
 | `esc` | Close command bar |
