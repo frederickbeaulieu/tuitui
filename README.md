@@ -1,6 +1,22 @@
 # tuitui
 
+```
+⠴⠶⣖⡋⠉⠍⠑⠢⡀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀  ⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢀⠔⠊⠩⠉⢙⣲⠶⠦
+⠀⠀⠀⢣⠀⠀⠀⠀⠘⢦⡀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀  ⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢀⡴⠃⠀⠀⠀⠀⡜⠀⠀⠀
+⠀⠀⣠⠼⡆⠀⢀⡔⠊⠉⠉⠓⠦⣄⡀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀  ⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢀⣠⠴⠚⠉⠉⠑⢢⡀⠀⢰⠧⣄⠀⠀
+⠀⠀⠈⠚⡇⠀⠀⠃⠀⠀⠀⠀⠀⠀⠈⠓⢄⡀⠀⠀⠀⠀⠀⠀⠀ tuitui⠀⠀⠀⠀⠀⠀⠀⠀⢀⡠⠚⠁⠀⠀⠀⠀⠀⠀⠘⠀⠀⢸⠓⠁⠀⠀
+⠀⠀⠀⠀⠘⣄⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠙⠢⣀⠀⠀⠀⠀⠀⠀⠀⠀  ⠀⠀⠀⠀⠀⠀⠀⠀⣀⠔⠋⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⣠⠃⠀⠀⠀⠀
+⠀⠀⠀⠀⠀⠈⠲⣄⠀⠀⠀⠀⠀⠀⠒⠤⣀⠀⠀⠈⠳⣄⠀⠀⠀⠀⠀⠀  ⠀⠀⠀⠀⠀⠀⣠⠞⠁⠀⠀⣀⠤⠒⠀⠀⠀⠀⠀⠀⣠⠖⠁⠀⠀⠀⠀⠀
+⠀⠀⠀⠀⠀⠀⠀⠀⠉⠒⠤⢄⣀⣀⠀⠀⠀⢉⣓⠲⠀⣬⣕⡦⠀⠀⠀⠀  ⠀⠀⠀⠀⢴⣪⣥⠀⠖⣚⡉⠀⠀⠀⣀⣀⡠⠤⠒⠉⠀⠀⠀⠀⠀⠀⠀⠀
+⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠸⠿⠛⡶⠋⠁⠈⠑⣄⠘⢆⠀⠀⠀⠀⠀  ⠀⠀⠀⠀⠀⡰⠃⣠⠊⠁⠈⠙⢶⠛⠿⠇⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
+⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⣠⠎⢀⠞⠁⠀⠀⠀⠀⠈⢢⡈⠳⡀⠀⠀⠀  ⠀⠀⠀⢀⠞⢁⡔⠁⠀⠀⠀⠀⠈⠳⡀⠱⣄⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
+⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠒⠓⠒⠛⠂⠀⠀⠀⠀⠀⠀⠀⠱⡄⠙⣄⠀⠀  ⠀⠀⣠⠋⢠⠎⠀⠀⠀⠀⠀⠀⠀⠐⠛⠒⠚⠒⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
+⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠈⠦⢬⡦⠀  ⠀⢴⡥⠴⠁⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
+```
+
 A terminal user interface for [Jujutsu (jj)](https://github.com/jj-vcs/jj) version control, built in Go with [Bubble Tea v2](https://charm.land/bubbletea).
+
+The name and logo are inspired by the [tui](<https://en.wikipedia.org/wiki/Tui_(bird)>), a songbird native to New Zealand (one of my favorite places). The jj logo features two birds, so tuitui felt like a natural fit: two tui birds facing each other, with the doubled name mirroring jj's convention of repeating letters.
 
 ## Features
 
@@ -70,40 +86,40 @@ tuitui --version
 
 ## Keybindings
 
-| Key | Action |
-|---|---|
-| `q` or `ctrl+c` | Quit |
-| `h` or `left` | Back |
-| `l` or `right` | Open |
-| `j`/`k` or `up`/`down` | Navigate / scroll |
-| `ctrl+d`/`ctrl+u` | Half-page down/up |
-| `g`/`G` | Jump to top/bottom |
+| Key                    | Action             |
+| ---------------------- | ------------------ |
+| `q` or `ctrl+c`        | Quit               |
+| `h` or `left`          | Back               |
+| `l` or `right`         | Open               |
+| `j`/`k` or `up`/`down` | Navigate / scroll  |
+| `ctrl+d`/`ctrl+u`      | Half-page down/up  |
+| `g`/`G`                | Jump to top/bottom |
 
 ### Log panel
 
-| Key | Action |
-|---|---|
+| Key | Action                            |
+| --- | --------------------------------- |
 | `z` | Toggle all revisions/current tree |
 
 ### Diff panel
 
-| Key | Action |
-|---|---|
-| `s` | Toggle side-by-side/inline |
+| Key | Action                        |
+| --- | ----------------------------- |
+| `s` | Toggle side-by-side/inline    |
 | `z` | Toggle full file/changes only |
 
 ### Command bar
 
 Open with `:` to run any jj command. Completions appear automatically as you type.
 
-| Key | Action |
-|---|---|
-| `:` | Open command bar |
-| `tab` or `right` | Accept completion |
-| `ctrl+n`/`ctrl+p` or `up`/`down` | Navigate suggestions |
-| `ctrl+space` | Toggle suggestions dropdown |
-| `enter` | Run command |
-| `esc` | Close command bar |
+| Key                              | Action                      |
+| -------------------------------- | --------------------------- |
+| `:`                              | Open command bar            |
+| `tab` or `right`                 | Accept completion           |
+| `ctrl+n`/`ctrl+p` or `up`/`down` | Navigate suggestions        |
+| `ctrl+space`                     | Toggle suggestions dropdown |
+| `enter`                          | Run command                 |
+| `esc`                            | Close command bar           |
 
 ## Contributing
 
