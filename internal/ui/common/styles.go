@@ -50,8 +50,7 @@ var (
 )
 
 var ConflictStyle = lipgloss.NewStyle().
-	Foreground(ColorRed).
-	Bold(true)
+	Foreground(ColorRed)
 
 var (
 	FileAdded    = lipgloss.NewStyle().Foreground(ColorGreen)

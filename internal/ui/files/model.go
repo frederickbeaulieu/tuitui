@@ -13,9 +13,10 @@ import (
 )
 
 type FilesDataMsg struct {
-	ChangeID string
-	Files    []jj.FileChange
-	Err      error
+	ChangeID      string
+	Files         []jj.FileChange
+	ConflictFiles map[string]bool
+	Err           error
 }
 
 type FileSelectedMsg struct {
@@ -26,17 +27,18 @@ type FileSelectedMsg struct {
 type FilesCloseMsg struct{}
 
 type Model struct {
-	runner   *jj.Runner
-	changeID string
-	files    []jj.FileChange
-	cursor   int
-	offset   int // scroll offset in file entries
-	width    int
-	height   int
-	focused  bool
-	loading  bool
-	err      error
-	keymap   common.KeyMap
+	runner        *jj.Runner
+	changeID      string
+	files         []jj.FileChange
+	conflictFiles map[string]bool
+	cursor        int
+	offset        int // scroll offset in file entries
+	width         int
+	height        int
+	focused       bool
+	loading       bool
+	err           error
+	keymap        common.KeyMap
 }
 
 func New(runner *jj.Runner) Model {
@@ -76,7 +78,8 @@ func (m *Model) SetRevision(changeID string) tea.Cmd {
 	runner := m.runner
 	return func() tea.Msg {
 		files, err := runner.ChangedFiles(changeID)
-		return FilesDataMsg{ChangeID: changeID, Files: files, Err: err}
+		conflicts := fetchConflictFiles(runner, changeID)
+		return FilesDataMsg{ChangeID: changeID, Files: files, ConflictFiles: conflicts, Err: err}
 	}
 }
 
@@ -91,8 +94,22 @@ func (m *Model) Refresh() tea.Cmd {
 	changeID := m.changeID
 	return func() tea.Msg {
 		files, err := runner.ChangedFiles(changeID)
-		return FilesDataMsg{ChangeID: changeID, Files: files, Err: err}
+		conflicts := fetchConflictFiles(runner, changeID)
+		return FilesDataMsg{ChangeID: changeID, Files: files, ConflictFiles: conflicts, Err: err}
 	}
+}
+
+// fetchConflictFiles returns a set of file paths that have conflicts in the given revision.
+func fetchConflictFiles(runner *jj.Runner, changeID string) map[string]bool {
+	paths, err := runner.ConflictFiles(changeID)
+	if err != nil || len(paths) == 0 {
+		return nil
+	}
+	m := make(map[string]bool, len(paths))
+	for _, p := range paths {
+		m[p] = true
+	}
+	return m
 }
 
 func (m Model) SelectedFile() *jj.FileChange {
@@ -109,6 +126,7 @@ func (m Model) Update(msg tea.Msg) (Model, tea.Cmd) {
 			m.loading = false
 			m.err = msg.Err
 			m.files = msg.Files
+			m.conflictFiles = msg.ConflictFiles
 			if m.cursor >= len(m.files) && len(m.files) > 0 {
 				m.cursor = len(m.files) - 1
 			}
@@ -178,6 +196,9 @@ func (m Model) View() string {
 
 		f := m.files[i]
 		line := fmt.Sprintf("%s %s", common.FileStatusSymbol(f.Status), f.Path)
+		if m.conflictFiles[f.Path] {
+			line += " " + common.ConflictStyle.Render("(conflict)")
+		}
 		line = common.Truncate(line, m.width)
 
 		if i == m.cursor {

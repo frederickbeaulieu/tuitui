@@ -23,6 +23,26 @@ func (r *Runner) ChangedFiles(revision string) ([]FileChange, error) {
 	return parseFileChanges(output), nil
 }
 
+// ConflictFiles returns the list of file paths that have conflicts in the given revision.
+func (r *Runner) ConflictFiles(revision string) ([]string, error) {
+	output, err := r.Run("resolve", "--list", "--revision", revision)
+	if err != nil {
+		// If there are no conflicts, jj resolve --list may return an error.
+		return nil, nil
+	}
+	var paths []string
+	for _, line := range nonEmptyLines(output) {
+		// Each line looks like: "path/to/file    2-sided conflict"
+		// The path is separated from the description by 4 spaces.
+		path, _, _ := strings.Cut(line, "    ")
+		path = strings.TrimSpace(path)
+		if path != "" {
+			paths = append(paths, path)
+		}
+	}
+	return paths, nil
+}
+
 func parseFileChanges(output string) []FileChange {
 	var changes []FileChange
 	for _, line := range nonEmptyLines(output) {
