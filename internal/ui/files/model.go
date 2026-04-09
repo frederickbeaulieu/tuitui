@@ -22,6 +22,7 @@ type FilesDataMsg struct {
 type FileSelectedMsg struct {
 	ChangeID string
 	Path     string
+	Changed  bool
 }
 
 type FilesCloseMsg struct{}
@@ -188,8 +189,9 @@ func (m Model) handleKey(msg tea.KeyPressMsg) (Model, tea.Cmd) {
 
 	case key.Matches(msg, m.keymap.Open):
 		if f := m.SelectedFile(); f != nil {
+			changed := f.Status != " "
 			return m, func() tea.Msg {
-				return FileSelectedMsg{ChangeID: m.changeID, Path: f.Path}
+				return FileSelectedMsg{ChangeID: m.changeID, Path: f.Path, Changed: changed}
 			}
 		}
 		return m, nil

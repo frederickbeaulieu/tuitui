@@ -26,18 +26,20 @@ func DefaultKeyMap() KeyMap {
 	}
 }
 
-func (km KeyMap) StatusBinds(showFullFile bool) []key.Help {
-	context := km.ToggleContext.Help()
-	if showFullFile {
-		context.Desc = "changes only"
-	}
+func (km KeyMap) StatusBinds(showFullFile bool, plainFile bool) []key.Help {
 	binds := []key.Help{
 		km.Back.Help(),
 	}
 	binds = append(binds, km.ScrollBinds()...)
-	binds = append(binds,
-		km.ToggleLayout.Help(),
-		context,
-	)
+	if !plainFile {
+		context := km.ToggleContext.Help()
+		if showFullFile {
+			context.Desc = "changes only"
+		}
+		binds = append(binds,
+			km.ToggleLayout.Help(),
+			context,
+		)
+	}
 	return binds
 }
