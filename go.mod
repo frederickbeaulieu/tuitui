@@ -7,6 +7,7 @@ require (
 	charm.land/bubbletea/v2 v2.0.2
 	charm.land/lipgloss/v2 v2.0.2
 	github.com/alecthomas/chroma/v2 v2.23.1
+	github.com/sahilm/fuzzy v0.1.1
 )
 
 require github.com/dlclark/regexp2 v1.11.5 // indirect
