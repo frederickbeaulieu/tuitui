@@ -37,14 +37,15 @@ type Model struct {
 	height        int
 	focused       bool
 	loading       bool
+	showAll       bool
 	err           error
-	keymap        common.KeyMap
+	keymap        KeyMap
 }
 
 func New(runner *jj.Runner) Model {
 	return Model{
 		runner: runner,
-		keymap: common.DefaultKeyMap(),
+		keymap: DefaultKeyMap(),
 	}
 }
 
@@ -60,12 +61,7 @@ func (m *Model) Blur() { m.focused = false }
 func (m Model) Focused() bool { return m.focused }
 
 func (m Model) StatusBinds() []key.Help {
-	binds := []key.Help{
-		m.keymap.Back.Help(),
-		m.keymap.Open.Help(),
-	}
-	binds = append(binds, m.keymap.NavigationBinds()...)
-	return binds
+	return m.keymap.StatusBinds(m.showAll)
 }
 
 func (m *Model) SetRevision(changeID string) tea.Cmd {
@@ -76,8 +72,18 @@ func (m *Model) SetRevision(changeID string) tea.Cmd {
 	m.err = nil
 
 	runner := m.runner
+	showAll := m.showAll
 	return func() tea.Msg {
-		files, err := runner.ChangedFiles(changeID)
+		var files []jj.FileChange
+		var err error
+		if showAll {
+			files, err = runner.AllFiles(changeID)
+			if err == nil {
+				files = mergeFileStatuses(runner, changeID, files)
+			}
+		} else {
+			files, err = runner.ChangedFiles(changeID)
+		}
 		conflicts := fetchConflictFiles(runner, changeID)
 		return FilesDataMsg{ChangeID: changeID, Files: files, ConflictFiles: conflicts, Err: err}
 	}
@@ -92,11 +98,40 @@ func (m *Model) Refresh() tea.Cmd {
 
 	runner := m.runner
 	changeID := m.changeID
+	showAll := m.showAll
 	return func() tea.Msg {
-		files, err := runner.ChangedFiles(changeID)
+		var files []jj.FileChange
+		var err error
+		if showAll {
+			files, err = runner.AllFiles(changeID)
+			if err == nil {
+				files = mergeFileStatuses(runner, changeID, files)
+			}
+		} else {
+			files, err = runner.ChangedFiles(changeID)
+		}
 		conflicts := fetchConflictFiles(runner, changeID)
 		return FilesDataMsg{ChangeID: changeID, Files: files, ConflictFiles: conflicts, Err: err}
 	}
+}
+
+// mergeFileStatuses overlays change statuses (A/M/D/R) from ChangedFiles onto
+// the full file list so that modified files keep their status indicator.
+func mergeFileStatuses(runner *jj.Runner, changeID string, allFiles []jj.FileChange) []jj.FileChange {
+	changed, err := runner.ChangedFiles(changeID)
+	if err != nil || len(changed) == 0 {
+		return allFiles
+	}
+	statusMap := make(map[string]string, len(changed))
+	for _, c := range changed {
+		statusMap[c.Path] = c.Status
+	}
+	for i, f := range allFiles {
+		if s, ok := statusMap[f.Path]; ok {
+			allFiles[i].Status = s
+		}
+	}
+	return allFiles
 }
 
 // fetchConflictFiles returns a set of file paths that have conflicts in the given revision.
@@ -145,6 +180,12 @@ func (m Model) Update(msg tea.Msg) (Model, tea.Cmd) {
 
 func (m Model) handleKey(msg tea.KeyPressMsg) (Model, tea.Cmd) {
 	switch {
+	case key.Matches(msg, m.keymap.ToggleAllFiles):
+		m.showAll = !m.showAll
+		m.cursor = 0
+		m.offset = 0
+		return m, m.Refresh()
+
 	case key.Matches(msg, m.keymap.Open):
 		if f := m.SelectedFile(); f != nil {
 			return m, func() tea.Msg {
@@ -178,6 +219,9 @@ func (m Model) View() string {
 		return common.ConflictStyle.Render(fmt.Sprintf("Error: %v", m.err))
 	}
 	if len(m.files) == 0 {
+		if m.showAll {
+			return common.TextMuted.Render("No files")
+		}
 		return common.TextMuted.Render("No changes")
 	}
 

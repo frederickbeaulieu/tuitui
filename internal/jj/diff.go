@@ -23,6 +23,24 @@ func (r *Runner) ChangedFiles(revision string) ([]FileChange, error) {
 	return parseFileChanges(output), nil
 }
 
+// FileShow returns the content of a file at the given revision.
+func (r *Runner) FileShow(revision, path string) (string, error) {
+	return r.Run("file", "show", "--revision", revision, path)
+}
+
+// AllFiles returns the list of all files present in the given revision's tree.
+func (r *Runner) AllFiles(revision string) ([]FileChange, error) {
+	output, err := r.Run("file", "list", "--revision", revision)
+	if err != nil {
+		return nil, err
+	}
+	var files []FileChange
+	for _, line := range nonEmptyLines(output) {
+		files = append(files, FileChange{Status: " ", Path: line})
+	}
+	return files, nil
+}
+
 // ConflictFiles returns the list of file paths that have conflicts in the given revision.
 func (r *Runner) ConflictFiles(revision string) ([]string, error) {
 	output, err := r.Run("resolve", "--list", "--revision", revision)
