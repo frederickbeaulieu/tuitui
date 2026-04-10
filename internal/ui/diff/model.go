@@ -15,6 +15,7 @@ import (
 	"github.com/alecthomas/chroma/v2/formatters"
 	"github.com/alecthomas/chroma/v2/lexers"
 	"github.com/alecthomas/chroma/v2/styles"
+	"github.com/charmbracelet/x/ansi"
 
 	"github.com/frederickbeaulieu/tuitui/internal/jj"
 	"github.com/frederickbeaulieu/tuitui/internal/ui/common"
@@ -222,7 +223,7 @@ func (m Model) View() string {
 		if i > m.offset {
 			b.WriteString("\n")
 		}
-		b.WriteString(common.Truncate(m.lines[i], m.width))
+		b.WriteString(ansi.Truncate(m.lines[i], m.width, ""))
 	}
 
 	return b.String()

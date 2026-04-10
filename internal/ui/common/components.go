@@ -4,6 +4,7 @@ import (
 	"strings"
 
 	"charm.land/lipgloss/v2"
+	"github.com/charmbracelet/x/ansi"
 )
 
 // RenderPanel renders content inside a bordered panel with a title.
@@ -42,7 +43,7 @@ func RenderPanel(title, content string, width, height int, focused bool) string 
 // overlayTitle places a title string over the top border of a panel,
 // preserving ANSI styling on the border line.
 func overlayTitle(borderLine, title string) string {
-	titleVisualWidth := VisualLen(StripAnsi(title))
+	titleVisualWidth := ansi.StringWidth(title)
 	if titleVisualWidth == 0 {
 		return borderLine
 	}
@@ -102,84 +103,11 @@ func overlayTitle(borderLine, title string) string {
 	return string(result)
 }
 
-// VisualLen returns the number of runes in s. Callers should strip ANSI first.
-func VisualLen(s string) int {
-	return len([]rune(s))
-}
-
-func StripAnsi(s string) string {
-	result := make([]rune, 0, len(s))
-	inEscape := false
-	for _, r := range s {
-		if r == '\x1b' {
-			inEscape = true
-			continue
-		}
-		if inEscape {
-			if (r >= 'A' && r <= 'Z') || (r >= 'a' && r <= 'z') {
-				inEscape = false
-			}
-			continue
-		}
-		result = append(result, r)
-	}
-	return string(result)
-}
-
-// Truncate truncates a string to the given visual width (excluding ANSI escapes).
-func Truncate(s string, maxWidth int) string {
-	if maxWidth <= 0 {
-		return ""
-	}
-	visualLen := len([]rune(StripAnsi(s)))
-	if visualLen <= maxWidth {
-		return s
-	}
-	return TruncateAnsi(s, maxWidth)
-}
-
-// TruncateAnsi truncates a string containing ANSI escape sequences to the
-// given visual width without splitting escape sequences.
-func TruncateAnsi(s string, maxWidth int) string {
-	if maxWidth <= 0 {
-		return ""
-	}
-
-	runes := []rune(s)
-	var result []rune
-	visibleCount := 0
-	pos := 0
-
-	for pos < len(runes) && visibleCount < maxWidth {
-		if runes[pos] == '\x1b' {
-			for pos < len(runes) {
-				result = append(result, runes[pos])
-				if runes[pos] != '\x1b' && ((runes[pos] >= 'A' && runes[pos] <= 'Z') || (runes[pos] >= 'a' && runes[pos] <= 'z')) {
-					pos++
-					break
-				}
-				pos++
-			}
-			continue
-		}
-
-		result = append(result, runes[pos])
-		visibleCount++
-		pos++
-	}
-
-	if visibleCount >= maxWidth {
-		result = append(result, []rune("\x1b[0m")...)
-	}
-
-	return string(result)
-}
-
 // HighlightLine applies a background highlight to a line while preserving its
 // existing foreground ANSI colors. It re-injects the background after every
 // ANSI reset so the highlight persists across the entire line.
 func HighlightLine(line string, width int) string {
-	plainLen := VisualLen(StripAnsi(line))
+	plainLen := ansi.StringWidth(line)
 	if plainLen < width {
 		line = line + strings.Repeat(" ", width-plainLen)
 	}

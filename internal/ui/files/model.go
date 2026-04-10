@@ -7,6 +7,7 @@ import (
 
 	"charm.land/bubbles/v2/key"
 	tea "charm.land/bubbletea/v2"
+	"github.com/charmbracelet/x/ansi"
 
 	"github.com/frederickbeaulieu/tuitui/internal/jj"
 	"github.com/frederickbeaulieu/tuitui/internal/ui/common"
@@ -245,7 +246,7 @@ func (m Model) View() string {
 		if m.conflictFiles[f.Path] {
 			line += " " + common.ConflictStyle.Render("(conflict)")
 		}
-		line = common.Truncate(line, m.width)
+		line = ansi.Truncate(line, m.width, "")
 
 		if i == m.cursor {
 			line = common.HighlightLine(line, m.width)

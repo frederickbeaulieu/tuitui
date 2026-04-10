@@ -6,18 +6,16 @@ require (
 	charm.land/bubbles/v2 v2.0.0
 	charm.land/bubbletea/v2 v2.0.2
 	charm.land/lipgloss/v2 v2.0.2
+	github.com/alecthomas/chroma/v2 v2.23.1
 )
 
-require (
-	github.com/alecthomas/chroma/v2 v2.23.1 // indirect
-	github.com/dlclark/regexp2 v1.11.5 // indirect
-)
+require github.com/dlclark/regexp2 v1.11.5 // indirect
 
 require (
 	github.com/atotto/clipboard v0.1.4 // indirect
 	github.com/charmbracelet/colorprofile v0.4.2 // indirect
 	github.com/charmbracelet/ultraviolet v0.0.0-20260205113103-524a6607adb8 // indirect
-	github.com/charmbracelet/x/ansi v0.11.6 // indirect
+	github.com/charmbracelet/x/ansi v0.11.6
 	github.com/charmbracelet/x/term v0.2.2 // indirect
 	github.com/charmbracelet/x/termios v0.1.1 // indirect
 	github.com/charmbracelet/x/windows v0.2.2 // indirect

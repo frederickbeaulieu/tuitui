@@ -6,6 +6,7 @@ import (
 
 	"charm.land/bubbles/v2/key"
 	tea "charm.land/bubbletea/v2"
+	"github.com/charmbracelet/x/ansi"
 
 	"github.com/frederickbeaulieu/tuitui/internal/jj"
 	"github.com/frederickbeaulieu/tuitui/internal/ui/common"
@@ -194,7 +195,7 @@ func (m Model) renderGraph() string {
 				break
 			}
 
-			displayLine := common.Truncate(line, m.width)
+			displayLine := ansi.Truncate(line, m.width, "")
 
 			if isCurrent {
 				displayLine = common.HighlightLine(displayLine, m.width)
