@@ -145,7 +145,11 @@ func (m *Model) handleLogSelect(msg logpanel.LogSelectMsg) (Model, tea.Cmd) {
 
 func (m *Model) handleFileSelected(msg files.FileSelectedMsg) (Model, tea.Cmd) {
 	m.setMode(modeDiff)
-	return *m, m.diff.SetRevisionFile(msg.ChangeID, msg.Path, msg.Changed)
+	cmd := m.diff.SetRevisionFile(msg.ChangeID, msg.Path, msg.Changed)
+	if cmd == nil {
+		cmd = m.diff.Refresh()
+	}
+	return *m, cmd
 }
 
 func (m *Model) handleFilesClose() (Model, tea.Cmd) {
