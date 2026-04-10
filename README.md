@@ -21,8 +21,8 @@ The name and logo are inspired by the [tui](<https://en.wikipedia.org/wiki/Tui_(
 ## Features
 
 - **Graph log** — displays the jj commit graph with full DAG structure, colors, and working copy indicator
-- **File browser** — lists changed files per revision with status indicators (A/M/D/R)
-- **Diff panel** — shows syntax-highlighted diffs piped through [delta](https://github.com/dandavison/delta), with inline and side-by-side layouts
+- **File browser** — lists changed files per revision with status indicators (A/M/D/R), fuzzy filtering, and toggle between changed/all files
+- **Diff panel** — shows syntax-highlighted diffs piped through [delta](https://github.com/dandavison/delta), with side-by-side and inline layouts
 - **Command bar** — run any jj command with `:`; includes dynamic completion powered by jj's built-in shell completion engine, ghost text, and a navigable suggestions dropdown
 - **Live updates** — polls the repository for changes and auto-refreshes
 - **Vim-style navigation** — `j`/`k`, `ctrl+u`/`ctrl+d`, `g`/`G`
@@ -84,22 +84,37 @@ Print the version:
 tuitui --version
 ```
 
+Show help:
+
+```sh
+tuitui --help
+```
+
 ## Keybindings
 
 | Key                    | Action             |
 | ---------------------- | ------------------ |
 | `q` or `ctrl+c`        | Quit               |
-| `h` or `left`          | Back               |
 | `l` or `right`         | Open               |
+| `h` or `left`          | Back               |
 | `j`/`k` or `up`/`down` | Navigate / scroll  |
-| `ctrl+d`/`ctrl+u`      | Half-page down/up  |
+| `ctrl+u`/`ctrl+d`      | Half-page up/down  |
 | `g`/`G`                | Jump to top/bottom |
+| `:`                    | Open command bar   |
 
 ### Log panel
 
 | Key | Action                            |
 | --- | --------------------------------- |
 | `z` | Toggle all revisions/current tree |
+
+### File browser
+
+| Key   | Action                        |
+| ----- | ----------------------------- |
+| `z`   | Toggle all files/changed only |
+| `/`   | Fuzzy filter files            |
+| `esc` | Clear filter                  |
 
 ### Diff panel
 
@@ -112,14 +127,13 @@ tuitui --version
 
 Open with `:` to run any jj command. Completions appear automatically as you type.
 
-| Key                              | Action                      |
-| -------------------------------- | --------------------------- |
-| `:`                              | Open command bar            |
-| `tab` or `right`                 | Accept completion           |
-| `ctrl+n`/`ctrl+p` or `up`/`down` | Navigate suggestions        |
-| `ctrl+space`                     | Toggle suggestions dropdown |
-| `enter`                          | Run command                 |
-| `esc`                            | Close command bar           |
+| Key                | Action                      |
+| ------------------ | --------------------------- |
+| `esc`              | Close command bar           |
+| `ctrl+space`       | Toggle suggestions dropdown |
+| `ctrl+n`/`ctrl+p`  | Navigate suggestions        |
+| `tab`              | Accept completion           |
+| `enter`            | Run command                 |
 
 ## Contributing
 
