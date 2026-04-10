@@ -38,7 +38,6 @@ const (
 	sideBySide               // side-by-side diff
 )
 
-// Model is the diff panel.
 type Model struct {
 	runner       *jj.Runner
 	changeID     string // currently displayed revision
@@ -128,8 +127,15 @@ func (m *Model) Refresh() tea.Cmd {
 	width := m.width
 	sideBySide := m.layout == sideBySide
 	fullFile := m.showFullFile
+	plain := m.plainFile
 	return func() tea.Msg {
-		content, err := fetchDiff(runner, changeID, filePath, width, sideBySide, fullFile)
+		var content string
+		var err error
+		if plain {
+			content, err = fetchPlain(runner, changeID, filePath)
+		} else {
+			content, err = fetchDiff(runner, changeID, filePath, width, sideBySide, fullFile)
+		}
 		if err != nil {
 			return DiffContentMsg{ChangeID: changeID, FilePath: filePath, Err: err}
 		}
@@ -137,7 +143,7 @@ func (m *Model) Refresh() tea.Cmd {
 		if content != "" {
 			lines = strings.Split(content, "\n")
 		}
-		return DiffContentMsg{ChangeID: changeID, FilePath: filePath, Lines: lines}
+		return DiffContentMsg{ChangeID: changeID, FilePath: filePath, Lines: lines, PlainFile: plain}
 	}
 }
 
@@ -211,22 +217,39 @@ func (m Model) View() string {
 		return common.TextMuted.Render("No changes")
 	}
 
+	return m.renderLines()
+}
+
+func (m Model) renderLines() string {
 	visible := m.height
 	if visible <= 0 {
 		visible = 40
 	}
 
 	end := min(m.offset+visible, len(m.lines))
+	visibleLines := m.lines[m.offset:end]
 
 	var b strings.Builder
-	for i := m.offset; i < end; i++ {
-		if i > m.offset {
+	for i, line := range visibleLines {
+		if i > 0 {
 			b.WriteString("\n")
 		}
-		b.WriteString(ansi.Truncate(m.lines[i], m.width, ""))
+		if m.plainFile {
+			b.WriteString(lineGutter(m.offset+i+1, len(m.lines)))
+			b.WriteString(line)
+		} else {
+			b.WriteString(ansi.Truncate(line, m.width, ""))
+		}
 	}
 
 	return b.String()
+}
+
+func lineGutter(lineNum, totalLines int) string {
+	w := max(3, len(fmt.Sprintf("%d", totalLines)))
+	const numStyle = "\x1b[38;2;86;95;137m" // ColorOverlay RGB
+	const reset = "\x1b[0m"
+	return fmt.Sprintf("%s%*d%s  ", numStyle, w, lineNum, reset)
 }
 
 func (m Model) maxOffset() int {
