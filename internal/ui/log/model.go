@@ -2,11 +2,15 @@
 package log
 
 import (
+	"sort"
 	"strings"
 
 	"charm.land/bubbles/v2/key"
+	"charm.land/bubbles/v2/textinput"
 	tea "charm.land/bubbletea/v2"
+	"charm.land/lipgloss/v2"
 	"github.com/charmbracelet/x/ansi"
+	"github.com/sahilm/fuzzy"
 
 	"github.com/frederickbeaulieu/tuitui/internal/jj"
 	"github.com/frederickbeaulieu/tuitui/internal/ui/common"
@@ -14,7 +18,6 @@ import (
 
 const allRevset = "all()"
 
-// LogDataMsg carries log entries from an async fetch.
 type LogDataMsg struct {
 	Entries []jj.GraphEntry
 	Err     error
@@ -30,7 +33,10 @@ type LogSelectMsg struct {
 	ChangeID string
 }
 
-// Model is the log panel.
+type filteredEntry struct {
+	entry jj.GraphEntry
+}
+
 type Model struct {
 	runner       *jj.Runner
 	watcher      *jj.RepoWatcher
@@ -42,16 +48,27 @@ type Model struct {
 	focused      bool
 	keymap       KeyMap
 	showAll      bool
+	filtering    bool
+	filterInput  textinput.Model
+	filtered     []filteredEntry
 	err          error
 	prevChangeID string
 }
 
 func New(runner *jj.Runner, watcher *jj.RepoWatcher) Model {
+	fi := textinput.New()
+	fi.Prompt = "/"
+	s := fi.Styles()
+	s.Focused.Prompt = lipgloss.NewStyle().Foreground(common.ColorMauve).Bold(true)
+	s.Focused.Text = lipgloss.NewStyle().Foreground(common.ColorText)
+	fi.SetStyles(s)
+
 	return Model{
-		runner:  runner,
-		watcher: watcher,
-		focused: true,
-		keymap:  DefaultKeyMap(),
+		runner:      runner,
+		watcher:     watcher,
+		focused:     true,
+		filterInput: fi,
+		keymap:      DefaultKeyMap(),
 	}
 }
 
@@ -71,16 +88,17 @@ func (m *Model) Blur() { m.focused = false }
 func (m Model) Focused() bool { return m.focused }
 
 func (m Model) SelectedChangeID() string {
-	if len(m.entries) == 0 || m.cursor >= len(m.entries) {
+	entries := m.visibleEntries()
+	if len(entries) == 0 || m.cursor >= len(entries) {
 		return ""
 	}
-	return m.entries[m.cursor].Commit.ChangeID
+	return entries[m.cursor].Commit.ChangeID
 }
 
 func (m Model) ShowAll() bool { return m.showAll }
 
 func (m Model) StatusBinds() []key.Help {
-	return m.keymap.StatusBinds(m.showAll)
+	return m.keymap.StatusBinds(m.showAll, m.filtering, m.filterInput.Value() != "")
 }
 
 func (m Model) Update(msg tea.Msg) (Model, tea.Cmd) {
@@ -88,8 +106,9 @@ func (m Model) Update(msg tea.Msg) (Model, tea.Cmd) {
 	case LogDataMsg:
 		m.entries = msg.Entries
 		m.err = msg.Err
-		if m.cursor >= len(m.entries) && len(m.entries) > 0 {
-			m.cursor = len(m.entries) - 1
+		m.applyFilter()
+		if m.cursor >= m.visibleCount() && m.visibleCount() > 0 {
+			m.cursor = m.visibleCount() - 1
 		}
 		return m, m.emitCursorChanged()
 
@@ -103,11 +122,64 @@ func (m Model) Update(msg tea.Msg) (Model, tea.Cmd) {
 		return m.handleKey(msg)
 	}
 
+	if m.filtering {
+		var cmd tea.Cmd
+		m.filterInput, cmd = m.filterInput.Update(msg)
+		return m, cmd
+	}
+
 	return m, nil
 }
 
 func (m Model) handleKey(msg tea.KeyPressMsg) (Model, tea.Cmd) {
+	if m.filtering {
+		return m.handleFilterInput(msg)
+	}
+	return m.handleNormal(msg)
+}
+
+func (m Model) handleFilterInput(msg tea.KeyPressMsg) (Model, tea.Cmd) {
 	switch {
+	case key.Matches(msg, m.keymap.Close):
+		m.filterInput.Reset()
+		m.filtering = false
+		m.filterInput.Blur()
+		m.applyFilter()
+		return m, m.emitCursorChanged()
+
+	case msg.Code == tea.KeyEnter:
+		m.filtering = false
+		m.filterInput.Blur()
+		if m.filterInput.Value() == "" {
+			m.applyFilter()
+		}
+		return m, nil
+
+	default:
+		var cmd tea.Cmd
+		m.filterInput, cmd = m.filterInput.Update(msg)
+		m.applyFilter()
+		return m, cmd
+	}
+}
+
+func (m Model) handleNormal(msg tea.KeyPressMsg) (Model, tea.Cmd) {
+	switch {
+	case key.Matches(msg, m.keymap.Close):
+		if m.filterInput.Value() != "" {
+			m.filterInput.Reset()
+			m.applyFilter()
+			return m, m.emitCursorChanged()
+		}
+		return m, nil
+
+	case key.Matches(msg, m.keymap.Filter):
+		m.filtering = true
+		m.filterInput.Reset()
+		cmd := m.filterInput.Focus()
+		m.applyFilter()
+		return m, cmd
+
 	case key.Matches(msg, m.keymap.ToggleRevisions):
 		m.showAll = !m.showAll
 		m.cursor = 0
@@ -124,13 +196,172 @@ func (m Model) handleKey(msg tea.KeyPressMsg) (Model, tea.Cmd) {
 		return m, nil
 	}
 
-	maxCursor := len(m.entries) - 1
+	maxCursor := m.visibleCount() - 1
 	if newCursor, ok := m.keymap.HandleScroll(msg, m.cursor, maxCursor, m.viewportHeight()/4); ok {
 		m.cursor = newCursor
 		m.ensureVisible()
 		return m, m.emitCursorChanged()
 	}
 	return m, nil
+}
+
+func (m Model) View() string {
+	if m.err != nil {
+		return common.ConflictStyle.Render("Error: " + m.err.Error())
+	}
+	entries := m.visibleEntries()
+	if len(entries) == 0 {
+		return m.emptyView()
+	}
+	return m.renderGraph(entries)
+}
+
+func (m Model) emptyView() string {
+	var msg string
+	if m.filterInput.Value() != "" {
+		msg = "No matches"
+	} else {
+		msg = "No commits found"
+	}
+	empty := common.TextMuted.Render(msg)
+	if m.showFilterBar() {
+		return empty + "\n" + m.filterInput.View()
+	}
+	return empty
+}
+
+func (m Model) renderGraph(entries []jj.GraphEntry) string {
+	available := m.viewportHeight()
+	if available <= 0 {
+		return ""
+	}
+	if m.showFilterBar() {
+		available--
+	}
+
+	var b strings.Builder
+	linesUsed := 0
+
+	for i := m.offset; i < len(entries) && linesUsed < available; i++ {
+		entry := entries[i]
+		isCurrent := i == m.cursor
+
+		for _, line := range entry.Lines {
+			if linesUsed >= available {
+				break
+			}
+
+			displayLine := ansi.Truncate(line, m.width, "")
+			if isCurrent {
+				displayLine = common.HighlightLine(displayLine, m.width)
+			}
+
+			if linesUsed > 0 {
+				b.WriteString("\n")
+			}
+			b.WriteString(displayLine)
+			linesUsed++
+		}
+	}
+
+	if m.showFilterBar() {
+		b.WriteString("\n")
+		b.WriteString(m.filterInput.View())
+	}
+
+	return b.String()
+}
+
+func (m Model) visibleEntries() []jj.GraphEntry {
+	filter := m.filterInput.Value()
+	if filter != "" && len(m.filtered) > 0 {
+		entries := make([]jj.GraphEntry, len(m.filtered))
+		for i, f := range m.filtered {
+			entries[i] = f.entry
+		}
+		return entries
+	}
+	if filter != "" && len(m.filtered) == 0 {
+		return nil
+	}
+	return m.entries
+}
+
+func (m Model) visibleCount() int {
+	if m.filterInput.Value() != "" {
+		return len(m.filtered)
+	}
+	return len(m.entries)
+}
+
+func (m *Model) applyFilter() {
+	filter := m.filterInput.Value()
+	if filter == "" {
+		m.filtered = nil
+		m.cursor = 0
+		m.offset = 0
+		return
+	}
+
+	searchStrings := make([]string, len(m.entries))
+	for i, e := range m.entries {
+		searchStrings[i] = filterString(e.Commit)
+	}
+
+	matches := fuzzy.Find(filter, searchStrings)
+	sort.Slice(matches, func(i, j int) bool {
+		return matches[i].Index < matches[j].Index
+	})
+
+	m.filtered = make([]filteredEntry, len(matches))
+	for i, match := range matches {
+		m.filtered[i] = filteredEntry{
+			entry: m.entries[match.Index],
+		}
+	}
+
+	m.cursor = 0
+	m.offset = 0
+}
+
+func filterString(c jj.Commit) string {
+	s := c.ChangeID + " " + c.Description
+	if len(c.Bookmarks) > 0 {
+		s += " " + strings.Join(c.Bookmarks, " ")
+	}
+	return s
+}
+
+func (m Model) showFilterBar() bool {
+	return m.filtering || m.filterInput.Value() != ""
+}
+
+func (m Model) viewportHeight() int {
+	if m.height <= 0 {
+		return 40
+	}
+	return m.height
+}
+
+func (m *Model) ensureVisible() {
+	if m.cursor < m.offset {
+		m.offset = m.cursor
+	}
+
+	entries := m.visibleEntries()
+	linesNeeded := 0
+	for i := m.offset; i <= m.cursor && i < len(entries); i++ {
+		linesNeeded += len(entries[i].Lines)
+	}
+
+	available := m.viewportHeight()
+	if m.showFilterBar() {
+		available--
+	}
+	for linesNeeded > available && m.offset < m.cursor {
+		linesNeeded -= len(entries[m.offset].Lines)
+		m.offset++
+	}
 }
 
 func (m *Model) emitCursorChanged() tea.Cmd {
@@ -164,74 +395,5 @@ func (m Model) awaitRepoChange() tea.Cmd {
 	return func() tea.Msg {
 		<-ch
 		return RepoChangedMsg{}
-	}
-}
-
-func (m Model) View() string {
-	if m.err != nil {
-		return common.ConflictStyle.Render("Error: " + m.err.Error())
-	}
-	if len(m.entries) == 0 {
-		return common.TextMuted.Render("No commits found")
-	}
-	return m.renderGraph()
-}
-
-func (m Model) renderGraph() string {
-	availableLines := m.viewportHeight()
-	if availableLines <= 0 {
-		return ""
-	}
-
-	var b strings.Builder
-	linesUsed := 0
-
-	for i := m.offset; i < len(m.entries) && linesUsed < availableLines; i++ {
-		entry := m.entries[i]
-		isCurrent := i == m.cursor
-
-		for _, line := range entry.Lines {
-			if linesUsed >= availableLines {
-				break
-			}
-
-			displayLine := ansi.Truncate(line, m.width, "")
-
-			if isCurrent {
-				displayLine = common.HighlightLine(displayLine, m.width)
-			}
-
-			if linesUsed > 0 {
-				b.WriteString("\n")
-			}
-			b.WriteString(displayLine)
-			linesUsed++
-		}
-	}
-
-	return b.String()
-}
-
-func (m Model) viewportHeight() int {
-	if m.height <= 0 {
-		return 40
-	}
-	return m.height
-}
-
-func (m *Model) ensureVisible() {
-	if m.cursor < m.offset {
-		m.offset = m.cursor
-	}
-
-	linesNeeded := 0
-	for i := m.offset; i <= m.cursor && i < len(m.entries); i++ {
-		linesNeeded += len(m.entries[i].Lines)
-	}
-
-	available := m.viewportHeight()
-	for linesNeeded > available && m.offset < m.cursor {
-		linesNeeded -= len(m.entries[m.offset].Lines)
-		m.offset++
 	}
 }
