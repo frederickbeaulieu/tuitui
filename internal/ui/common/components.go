@@ -112,7 +112,7 @@ func HighlightLine(line string, width int) string {
 		line = line + strings.Repeat(" ", width-plainLen)
 	}
 
-	const bgSet = "\x1b[48;2;86;95;137m" // ColorOverlay RGB
+	const bgSet = "\x1b[100m" // ANSI color 8 background (bright black / ColorOverlay)
 
 	highlighted := bgSet +
 		strings.ReplaceAll(

@@ -4,19 +4,19 @@ import (
 	"charm.land/lipgloss/v2"
 )
 
-// Tokyo Night color palette.
+// ANSI palette colors — follow the terminal theme automatically.
 var (
-	ColorMauve  = lipgloss.Color("#bb9af7")
-	ColorRed    = lipgloss.Color("#f7768e")
-	ColorYellow = lipgloss.Color("#e0af68")
-	ColorGreen  = lipgloss.Color("#9ece6a")
-	ColorTeal   = lipgloss.Color("#73daca")
-	ColorBlue   = lipgloss.Color("#7aa2f7")
+	ColorMauve  = lipgloss.ANSIColor(13) // bright magenta
+	ColorRed    = lipgloss.ANSIColor(1)  // red
+	ColorYellow = lipgloss.ANSIColor(3)  // yellow
+	ColorGreen  = lipgloss.ANSIColor(2)  // green
+	ColorTeal   = lipgloss.ANSIColor(14) // bright cyan
+	ColorBlue   = lipgloss.ANSIColor(4)  // blue
 
-	ColorText    = lipgloss.Color("#c0caf5")
-	ColorSubtext = lipgloss.Color("#a9b1d6")
-	ColorOverlay = lipgloss.Color("#565f89")
-	ColorSurface = lipgloss.Color("#24283b")
+	ColorText    = lipgloss.ANSIColor(7)  // white
+	ColorSubtext = lipgloss.ANSIColor(15) // bright white
+	ColorOverlay = lipgloss.ANSIColor(8)  // bright black
+	ColorSurface = lipgloss.ANSIColor(0)  // black
 )
 
 var (

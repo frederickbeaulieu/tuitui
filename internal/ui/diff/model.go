@@ -247,7 +247,7 @@ func (m Model) renderLines() string {
 
 func lineGutter(lineNum, totalLines int) string {
 	w := max(3, len(fmt.Sprintf("%d", totalLines)))
-	const numStyle = "\x1b[38;2;86;95;137m" // ColorOverlay RGB
+	const numStyle = "\x1b[90m" // ANSI color 8 (bright black / ColorOverlay)
 	const reset = "\x1b[0m"
 	return fmt.Sprintf("%s%*d%s  ", numStyle, w, lineNum, reset)
 }
