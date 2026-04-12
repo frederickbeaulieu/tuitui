@@ -119,8 +119,8 @@ func visibleItems(cs completionState, maxItems int) ([]jj.Completion, int) {
 }
 
 func formatCompletionLine(item jj.Completion, width int) string {
-	valueStyle := lipgloss.NewStyle().Foreground(common.ColorText)
-	descStyle := lipgloss.NewStyle().Foreground(common.ColorOverlay)
+	valueStyle := lipgloss.NewStyle().Foreground(common.ColorSubtext)
+	descStyle := lipgloss.NewStyle().Foreground(common.ColorText)
 	innerWidth := width - 2
 
 	value := item.Value
@@ -146,7 +146,7 @@ func styleCompletionLine(line string, index, selected, width int) string {
 	if index == selected {
 		return common.HighlightLine(line, width)
 	}
-	return lipgloss.NewStyle().Background(common.ColorSurface).Width(width).Render(line)
+	return line
 }
 
 func acceptCompletion(input string, completion string) string {

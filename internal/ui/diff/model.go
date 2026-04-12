@@ -14,7 +14,6 @@ import (
 	"github.com/alecthomas/chroma/v2"
 	"github.com/alecthomas/chroma/v2/formatters"
 	"github.com/alecthomas/chroma/v2/lexers"
-	"github.com/alecthomas/chroma/v2/styles"
 	"github.com/charmbracelet/x/ansi"
 
 	"github.com/frederickbeaulieu/tuitui/internal/jj"
@@ -291,8 +290,8 @@ func formatPlain(input string, path string) (string, error) {
 	}
 	lexer = chroma.Coalesce(lexer)
 
-	style := styles.Get("tokyonight-night")
-	formatter := formatters.Get("terminal16m")
+	style := plainStyle()
+	formatter := formatters.Get("terminal16")
 
 	iterator, err := lexer.Tokenise(nil, input)
 	if err != nil {
@@ -307,12 +306,46 @@ func formatPlain(input string, path string) (string, error) {
 	return buf.String(), nil
 }
 
+// Tokyo Night style adapted for terminal output, with some adjustments for better visibility in a terminal.
+func plainStyle() *chroma.Style {
+	style, _ := chroma.NewStyle("plain", chroma.StyleEntries{
+		chroma.Keyword:            "#800080", // magenta
+		chroma.KeywordConstant:    "#800000", // red — nil, true, false, iota
+		chroma.KeywordDeclaration: "#800080",
+		chroma.KeywordType:        "#008080", // cyan — types
+		chroma.KeywordNamespace:   "#000080", // blue — package/import
+
+		chroma.Operator:     "bold #008000", // green bold
+		chroma.OperatorWord: "bold #008000",
+
+		chroma.NameFunction: "#000080", // blue
+		chroma.NameClass:    "#bbaa00", // bright yellow
+		chroma.NameBuiltin:  "#008000", // green
+
+		chroma.LiteralString:         "#008000", // green
+		chroma.LiteralStringEscape:   "#000080", // blue
+		chroma.LiteralStringInterpol: "#bbaa00", // bright yellow
+		chroma.LiteralNumber:         "#bbaa00", // bright yellow
+
+		chroma.Comment:          "italic #666666", // bright black italic
+		chroma.CommentSingle:    "italic #666666",
+		chroma.CommentMultiline: "italic #666666",
+		chroma.CommentSpecial:   "italic #666666",
+
+		chroma.GenericDeleted:  "#800000",
+		chroma.GenericInserted: "#008000",
+		chroma.GenericEmph:     "italic",
+		chroma.GenericStrong:   "bold",
+	})
+	return style
+}
+
 // formatDiff formats diff output through delta for syntax highlighting.
 func formatDiff(input string, width int, sideBySide bool, fullFile bool) (string, error) {
 	args := []string{
 		"--no-gitconfig",
 		"--paging=never",
-		"--syntax-theme=tokyonight_night",
+		"--syntax-theme=ansi",
 		fmt.Sprintf("--width=%d", width),
 	}
 	if sideBySide {
