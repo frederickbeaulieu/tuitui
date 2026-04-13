@@ -10,6 +10,7 @@ type Commit struct {
 	Author      string
 	Timestamp   time.Time
 	Bookmarks   []string
+	Tags        []string
 	IsEmpty     bool
 	IsConflict  bool
 	Parents     []string

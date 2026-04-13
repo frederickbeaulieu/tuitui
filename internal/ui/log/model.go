@@ -329,6 +329,9 @@ func filterString(c jj.Commit) string {
 	if len(c.Bookmarks) > 0 {
 		s += " " + strings.Join(c.Bookmarks, " ")
 	}
+	if len(c.Tags) > 0 {
+		s += " " + strings.Join(c.Tags, " ")
+	}
 	return s
 }
 

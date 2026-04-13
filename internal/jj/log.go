@@ -9,7 +9,26 @@ import (
 // logTemplate is the jj template for structured log output.
 // Fields are tab-separated; explicit tab concatenation is used
 // instead of separate() because separate() skips empty values.
-const logTemplate = `change_id ++ "\t" ++ commit_id ++ "\t" ++ if(description, description.first_line(), "") ++ "\t" ++ author.email() ++ "\t" ++ author.timestamp() ++ "\t" ++ bookmarks ++ "\t" ++ if(empty, "true", "false") ++ "\t" ++ if(conflict, "true", "false") ++ "\t" ++ parents.map(|p| p.commit_id()).join(",") ++ "\n"`
+const logTemplate = `change_id ++ "\t" ++ commit_id ++ "\t" ++ if(description, description.first_line(), "") ++ "\t" ++ author.email() ++ "\t" ++ author.timestamp() ++ "\t" ++ bookmarks ++ "\t" ++ tags ++ "\t" ++ if(empty, "true", "false") ++ "\t" ++ if(conflict, "true", "false") ++ "\t" ++ parents.map(|p| p.commit_id()).join(",") ++ "\n"`
+
+// Field indices for the tab-separated logTemplate output.
+// Order must match the template above.
+const (
+	fieldChangeID    = iota // 0
+	fieldCommitID           // 1
+	fieldDescription        // 2
+	fieldAuthor             // 3
+	fieldTimestamp          // 4
+	fieldBookmarks          // 5
+	fieldTags               // 6
+	fieldEmpty              // 7
+	fieldConflict           // 8
+	fieldParents            // 9
+	fieldCount              // total number of fields
+)
+
+// jjTimestampLayout is the time format produced by jj's author.timestamp().
+const jjTimestampLayout = "2006-01-02 15:04:05.000 -07:00"
 
 func (r *Runner) Log(revset string) ([]Commit, error) {
 	args := []string{"log", "--no-graph", "-T", logTemplate}
@@ -26,27 +45,30 @@ func (r *Runner) Log(revset string) ([]Commit, error) {
 }
 
 func (r *Runner) LogGraphEntries(revset string) ([]GraphEntry, error) {
-	commits, err := r.Log(revset)
-	if err != nil {
-		return nil, err
-	}
-
-	args := []string{"log"}
+	structuredArgs := []string{"log", "-T", logTemplate}
+	graphArgs := []string{"log"}
 	if revset != "" {
-		args = append(args, "-r", revset)
+		structuredArgs = append(structuredArgs, "-r", revset)
+		graphArgs = append(graphArgs, "-r", revset)
 	}
-	graphOutput, err := r.RunWithColor(args...)
+
+	structuredOutput, err := r.Run(structuredArgs...)
 	if err != nil {
 		return nil, err
 	}
+	commits := parseGraphLogOutput(structuredOutput)
 
+	graphOutput, err := r.RunWithColor(graphArgs...)
+	if err != nil {
+		return nil, err
+	}
 	blocks := splitGraphEntries(graphOutput)
 
-	entries := make([]GraphEntry, 0, len(commits))
-	for i, commit := range commits {
-		entry := GraphEntry{Commit: commit}
-		if i < len(blocks) {
-			entry.Lines = blocks[i]
+	entries := make([]GraphEntry, 0, len(blocks))
+	for i, block := range blocks {
+		entry := GraphEntry{Lines: block}
+		if i < len(commits) {
+			entry.Commit = commits[i]
 		}
 		entries = append(entries, entry)
 	}
@@ -119,6 +141,29 @@ func isNodeGlyph(r rune) bool {
 	return false
 }
 
+func parseGraphLogOutput(output string) []Commit {
+	var commits []Commit
+	for line := range strings.SplitSeq(strings.TrimSpace(output), "\n") {
+		tab := strings.IndexByte(line, '\t')
+		if tab == -1 {
+			continue
+		}
+		// The graph prefix (e.g. "│ ◆  ") is before the first field.
+		// Strip it by finding the change ID right before the first tab.
+		// The change ID is the last space-delimited word before the tab.
+		prefix := line[:tab]
+		lastSpace := strings.LastIndexByte(prefix, ' ')
+		changeID := prefix[lastSpace+1:]
+
+		// Build a full field slice: [changeID, commitID, desc, ...]
+		fields := append([]string{changeID}, strings.Split(line[tab+1:], "\t")...)
+		if commit, ok := commitFromFields(fields); ok {
+			commits = append(commits, commit)
+		}
+	}
+	return commits
+}
+
 func parseLogOutput(output string) ([]Commit, error) {
 	var commits []Commit
 
@@ -129,33 +174,46 @@ func parseLogOutput(output string) ([]Commit, error) {
 		}
 
 		fields := strings.Split(line, "\t")
-		if len(fields) < 8 {
-			continue
+		if commit, ok := commitFromFields(fields); ok {
+			commits = append(commits, commit)
 		}
-
-		commit := Commit{
-			ChangeID:    fields[0],
-			CommitID:    fields[1],
-			Description: fields[2],
-			Author:      fields[3],
-			IsEmpty:     fields[6] == "true",
-			IsConflict:  fields[7] == "true",
-		}
-
-		if ts, err := time.Parse("2006-01-02 15:04:05.000 -07:00", fields[4]); err == nil {
-			commit.Timestamp = ts
-		}
-
-		if fields[5] != "" {
-			commit.Bookmarks = strings.Split(fields[5], " ")
-		}
-
-		if len(fields) > 8 && fields[8] != "" {
-			commit.Parents = strings.Split(fields[8], ",")
-		}
-
-		commits = append(commits, commit)
 	}
 
 	return commits, nil
+}
+
+// commitFromFields parses a Commit from a tab-separated field slice
+// matching the logTemplate field order. Returns false if fields are
+// insufficient.
+func commitFromFields(fields []string) (Commit, bool) {
+	if len(fields) < fieldCount {
+		return Commit{}, false
+	}
+
+	commit := Commit{
+		ChangeID:    fields[fieldChangeID],
+		CommitID:    fields[fieldCommitID],
+		Description: fields[fieldDescription],
+		Author:      fields[fieldAuthor],
+		IsEmpty:     fields[fieldEmpty] == "true",
+		IsConflict:  fields[fieldConflict] == "true",
+	}
+
+	if ts, err := time.Parse(jjTimestampLayout, fields[fieldTimestamp]); err == nil {
+		commit.Timestamp = ts
+	}
+
+	if fields[fieldBookmarks] != "" {
+		commit.Bookmarks = strings.Split(fields[fieldBookmarks], " ")
+	}
+
+	if fields[fieldTags] != "" {
+		commit.Tags = strings.Split(fields[fieldTags], " ")
+	}
+
+	if fields[fieldParents] != "" {
+		commit.Parents = strings.Split(fields[fieldParents], ",")
+	}
+
+	return commit, true
 }
