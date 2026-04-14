@@ -169,3 +169,12 @@ func (km KeyMap) HandleScroll(msg tea.KeyPressMsg, pos, maxPos, halfPage int) (i
 func Clamp(v, lo, hi int) int {
 	return max(lo, min(v, hi))
 }
+
+// ViewportHeight returns the effective viewport height, defaulting to 40
+// when the panel has not been sized yet.
+func ViewportHeight(height int) int {
+	if height <= 0 {
+		return 40
+	}
+	return height
+}

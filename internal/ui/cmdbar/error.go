@@ -13,10 +13,7 @@ func (m Model) ErrorView() string {
 	if !m.showingError || len(m.lines) == 0 {
 		return ""
 	}
-	visible := m.height
-	if visible <= 0 {
-		visible = 40
-	}
+	visible := common.ViewportHeight(m.height)
 	end := min(m.scroll+visible, len(m.lines))
 	return strings.Join(m.lines[m.scroll:end], "\n")
 }

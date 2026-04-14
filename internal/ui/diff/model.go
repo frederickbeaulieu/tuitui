@@ -88,29 +88,7 @@ func (m *Model) SetRevisionFile(changeID, path string, changed bool) tea.Cmd {
 	m.offset = 0
 	m.loading = true
 	m.err = nil
-
-	runner := m.runner
-	width := m.width
-	sideBySide := m.layout == sideBySide
-	fullFile := m.showFullFile
-	return func() tea.Msg {
-		var content string
-		var err error
-		plainFile := !changed
-		if changed {
-			content, err = fetchDiff(runner, changeID, path, width, sideBySide, fullFile)
-		} else {
-			content, err = fetchPlain(runner, changeID, path)
-		}
-		if err != nil {
-			return DiffContentMsg{ChangeID: changeID, FilePath: path, Err: err}
-		}
-		var lines []string
-		if content != "" {
-			lines = strings.Split(content, "\n")
-		}
-		return DiffContentMsg{ChangeID: changeID, FilePath: path, Lines: lines, PlainFile: plainFile}
-	}
+	return m.fetchContent(!changed)
 }
 
 func (m *Model) Refresh() tea.Cmd {
@@ -119,14 +97,16 @@ func (m *Model) Refresh() tea.Cmd {
 	}
 	m.loading = true
 	m.err = nil
+	return m.fetchContent(m.plainFile)
+}
 
+func (m *Model) fetchContent(plain bool) tea.Cmd {
 	runner := m.runner
 	changeID := m.changeID
 	filePath := m.filePath
 	width := m.width
 	sideBySide := m.layout == sideBySide
 	fullFile := m.showFullFile
-	plain := m.plainFile
 	return func() tea.Msg {
 		var content string
 		var err error
@@ -220,10 +200,7 @@ func (m Model) View() string {
 }
 
 func (m Model) renderLines() string {
-	visible := m.height
-	if visible <= 0 {
-		visible = 40
-	}
+	visible := common.ViewportHeight(m.height)
 
 	end := min(m.offset+visible, len(m.lines))
 	visibleLines := m.lines[m.offset:end]

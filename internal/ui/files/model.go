@@ -6,7 +6,6 @@ import (
 	"strings"
 
 	"charm.land/bubbles/v2/key"
-	"charm.land/bubbles/v2/textinput"
 	tea "charm.land/bubbletea/v2"
 	"charm.land/lipgloss/v2"
 	"github.com/charmbracelet/x/ansi"
@@ -48,25 +47,17 @@ type Model struct {
 	focused       bool
 	loading       bool
 	showAll       bool
-	filtering     bool
-	filterInput   textinput.Model
+	filter        common.FilterBar
 	filtered      []filteredFile
 	err           error
 	keymap        KeyMap
 }
 
 func New(runner *jj.Runner) Model {
-	fi := textinput.New()
-	fi.Prompt = "/"
-	s := fi.Styles()
-	s.Focused.Prompt = lipgloss.NewStyle().Foreground(common.ColorMauve).Bold(true)
-	s.Focused.Text = lipgloss.NewStyle().Foreground(common.ColorText)
-	fi.SetStyles(s)
-
 	return Model{
-		runner:      runner,
-		filterInput: fi,
-		keymap:      DefaultKeyMap(),
+		runner: runner,
+		filter: common.NewFilterBar(),
+		keymap: DefaultKeyMap(),
 	}
 }
 
@@ -82,7 +73,7 @@ func (m *Model) Blur() { m.focused = false }
 func (m Model) Focused() bool { return m.focused }
 
 func (m Model) StatusBinds() []key.Help {
-	return m.keymap.StatusBinds(m.showAll, m.filtering, m.filterInput.Value() != "")
+	return m.keymap.StatusBinds(m.showAll, m.filter.Filtering, m.filter.Value() != "")
 }
 
 func (m Model) SelectedFile() *jj.FileChange {
@@ -99,26 +90,9 @@ func (m *Model) SetRevision(changeID string) tea.Cmd {
 	m.offset = 0
 	m.loading = true
 	m.err = nil
-	m.filterInput.Reset()
-	m.filtering = false
+	m.filter.Reset()
 	m.filtered = nil
-
-	runner := m.runner
-	showAll := m.showAll
-	return func() tea.Msg {
-		var files []jj.FileChange
-		var err error
-		if showAll {
-			files, err = runner.AllFiles(changeID)
-			if err == nil {
-				files = mergeFileStatuses(runner, changeID, files)
-			}
-		} else {
-			files, err = runner.ChangedFiles(changeID)
-		}
-		conflicts := fetchConflictFiles(runner, changeID)
-		return FilesDataMsg{ChangeID: changeID, Files: files, ConflictFiles: conflicts, Err: err}
-	}
+	return m.fetchFiles()
 }
 
 func (m *Model) Refresh() tea.Cmd {
@@ -127,7 +101,10 @@ func (m *Model) Refresh() tea.Cmd {
 	}
 	m.loading = true
 	m.err = nil
+	return m.fetchFiles()
+}
 
+func (m *Model) fetchFiles() tea.Cmd {
 	runner := m.runner
 	changeID := m.changeID
 	showAll := m.showAll
@@ -169,9 +146,8 @@ func (m Model) Update(msg tea.Msg) (Model, tea.Cmd) {
 		return m.handleKey(msg)
 	}
 
-	if m.filtering {
-		var cmd tea.Cmd
-		m.filterInput, cmd = m.filterInput.Update(msg)
+	if m.filter.Filtering {
+		cmd := m.filter.Update(msg)
 		return m, cmd
 	}
 
@@ -179,51 +155,33 @@ func (m Model) Update(msg tea.Msg) (Model, tea.Cmd) {
 }
 
 func (m Model) handleKey(msg tea.KeyPressMsg) (Model, tea.Cmd) {
-	if m.filtering {
-		return m.handleFilterInput(msg)
+	if m.filter.Filtering {
+		return m.handleFilterKey(msg)
 	}
 	return m.handleNormal(msg)
 }
 
-func (m Model) handleFilterInput(msg tea.KeyPressMsg) (Model, tea.Cmd) {
-	switch {
-	case key.Matches(msg, m.keymap.Close):
-		m.filterInput.Reset()
-		m.filtering = false
-		m.filterInput.Blur()
-		m.applyFilter()
+func (m Model) handleFilterKey(msg tea.KeyPressMsg) (Model, tea.Cmd) {
+	cmd, handled := m.filter.HandleKey(msg, m.keymap.Close)
+	if !handled {
 		return m, nil
-
-	case msg.Code == tea.KeyEnter:
-		m.filtering = false
-		m.filterInput.Blur()
-		if m.filterInput.Value() == "" {
-			m.applyFilter()
-		}
-		return m, nil
-
-	default:
-		var cmd tea.Cmd
-		m.filterInput, cmd = m.filterInput.Update(msg)
-		m.applyFilter()
-		return m, cmd
 	}
+	m.applyFilter()
+	return m, cmd
 }
 
 func (m Model) handleNormal(msg tea.KeyPressMsg) (Model, tea.Cmd) {
 	switch {
 	case key.Matches(msg, m.keymap.Close):
-		if m.filterInput.Value() != "" {
-			m.filterInput.Reset()
+		if m.filter.Value() != "" {
+			m.filter.ClearFilter()
 			m.applyFilter()
 			return m, nil
 		}
 		return m, nil
 
 	case key.Matches(msg, m.keymap.Filter):
-		m.filtering = true
-		m.filterInput.Reset()
-		cmd := m.filterInput.Focus()
+		cmd := m.filter.StartFilter()
 		m.applyFilter()
 		return m, cmd
 
@@ -277,7 +235,7 @@ func (m Model) View() string {
 
 func (m Model) emptyView() string {
 	var msg string
-	if m.filterInput.Value() != "" {
+	if m.filter.Value() != "" {
 		msg = "No matches"
 	} else if m.showAll {
 		msg = "No files"
@@ -286,16 +244,13 @@ func (m Model) emptyView() string {
 	}
 	empty := common.TextMuted.Render(msg)
 	if m.showFilterBar() {
-		return empty + "\n" + m.filterInput.View()
+		return empty + "\n" + m.filter.Input.View()
 	}
 	return empty
 }
 
 func (m Model) renderLines(files []jj.FileChange) string {
-	visible := m.height
-	if visible <= 0 {
-		visible = 40
-	}
+	visible := common.ViewportHeight(m.height)
 	if m.showFilterBar() {
 		visible-- // reserve 1 line for the filter bar
 	}
@@ -313,7 +268,7 @@ func (m Model) renderLines(files []jj.FileChange) string {
 
 	if m.showFilterBar() {
 		b.WriteString("\n")
-		b.WriteString(m.filterInput.View())
+		b.WriteString(m.filter.Input.View())
 	}
 
 	return b.String()
@@ -341,11 +296,11 @@ func (m Model) renderLine(index int, f jj.FileChange) string {
 }
 
 func (m Model) showFilterBar() bool {
-	return m.filtering || m.filterInput.Value() != ""
+	return m.filter.Active()
 }
 
 func (m Model) visibleFiles() []jj.FileChange {
-	filter := m.filterInput.Value()
+	filter := m.filter.Value()
 	if filter != "" && len(m.filtered) > 0 {
 		files := make([]jj.FileChange, len(m.filtered))
 		for i, f := range m.filtered {
@@ -360,21 +315,21 @@ func (m Model) visibleFiles() []jj.FileChange {
 }
 
 func (m Model) visibleCount() int {
-	if m.filterInput.Value() != "" {
+	if m.filter.Value() != "" {
 		return len(m.filtered)
 	}
 	return len(m.files)
 }
 
 func (m Model) matchedIndexesFor(i int) []int {
-	if m.filterInput.Value() == "" || i >= len(m.filtered) {
+	if m.filter.Value() == "" || i >= len(m.filtered) {
 		return nil
 	}
 	return m.filtered[i].matchedIndexes
 }
 
 func (m *Model) applyFilter() {
-	filter := m.filterInput.Value()
+	filter := m.filter.Value()
 	if filter == "" {
 		m.filtered = nil
 		m.cursor = 0
@@ -405,10 +360,7 @@ func (m *Model) ensureVisible() {
 	if m.cursor < m.offset {
 		m.offset = m.cursor
 	}
-	visible := m.height
-	if visible <= 0 {
-		visible = 40
-	}
+	visible := common.ViewportHeight(m.height)
 	if m.showFilterBar() {
 		visible-- // account for filter bar
 	}

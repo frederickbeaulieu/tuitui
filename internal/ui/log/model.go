@@ -6,9 +6,7 @@ import (
 	"strings"
 
 	"charm.land/bubbles/v2/key"
-	"charm.land/bubbles/v2/textinput"
 	tea "charm.land/bubbletea/v2"
-	"charm.land/lipgloss/v2"
 	"github.com/charmbracelet/x/ansi"
 	"github.com/sahilm/fuzzy"
 
@@ -48,27 +46,19 @@ type Model struct {
 	focused      bool
 	keymap       KeyMap
 	showAll      bool
-	filtering    bool
-	filterInput  textinput.Model
+	filter       common.FilterBar
 	filtered     []filteredEntry
 	err          error
 	prevChangeID string
 }
 
 func New(runner *jj.Runner, watcher *jj.RepoWatcher) Model {
-	fi := textinput.New()
-	fi.Prompt = "/"
-	s := fi.Styles()
-	s.Focused.Prompt = lipgloss.NewStyle().Foreground(common.ColorMauve).Bold(true)
-	s.Focused.Text = lipgloss.NewStyle().Foreground(common.ColorText)
-	fi.SetStyles(s)
-
 	return Model{
-		runner:      runner,
-		watcher:     watcher,
-		focused:     true,
-		filterInput: fi,
-		keymap:      DefaultKeyMap(),
+		runner:  runner,
+		watcher: watcher,
+		focused: true,
+		filter:  common.NewFilterBar(),
+		keymap:  DefaultKeyMap(),
 	}
 }
 
@@ -98,7 +88,7 @@ func (m Model) SelectedChangeID() string {
 func (m Model) ShowAll() bool { return m.showAll }
 
 func (m Model) StatusBinds() []key.Help {
-	return m.keymap.StatusBinds(m.showAll, m.filtering, m.filterInput.Value() != "")
+	return m.keymap.StatusBinds(m.showAll, m.filter.Filtering, m.filter.Value() != "")
 }
 
 func (m Model) Update(msg tea.Msg) (Model, tea.Cmd) {
@@ -122,9 +112,8 @@ func (m Model) Update(msg tea.Msg) (Model, tea.Cmd) {
 		return m.handleKey(msg)
 	}
 
-	if m.filtering {
-		var cmd tea.Cmd
-		m.filterInput, cmd = m.filterInput.Update(msg)
+	if m.filter.Filtering {
+		cmd := m.filter.Update(msg)
 		return m, cmd
 	}
 
@@ -132,51 +121,33 @@ func (m Model) Update(msg tea.Msg) (Model, tea.Cmd) {
 }
 
 func (m Model) handleKey(msg tea.KeyPressMsg) (Model, tea.Cmd) {
-	if m.filtering {
-		return m.handleFilterInput(msg)
+	if m.filter.Filtering {
+		return m.handleFilterKey(msg)
 	}
 	return m.handleNormal(msg)
 }
 
-func (m Model) handleFilterInput(msg tea.KeyPressMsg) (Model, tea.Cmd) {
-	switch {
-	case key.Matches(msg, m.keymap.Close):
-		m.filterInput.Reset()
-		m.filtering = false
-		m.filterInput.Blur()
-		m.applyFilter()
-		return m, m.emitCursorChanged()
-
-	case msg.Code == tea.KeyEnter:
-		m.filtering = false
-		m.filterInput.Blur()
-		if m.filterInput.Value() == "" {
-			m.applyFilter()
-		}
+func (m Model) handleFilterKey(msg tea.KeyPressMsg) (Model, tea.Cmd) {
+	cmd, handled := m.filter.HandleKey(msg, m.keymap.Close)
+	if !handled {
 		return m, nil
-
-	default:
-		var cmd tea.Cmd
-		m.filterInput, cmd = m.filterInput.Update(msg)
-		m.applyFilter()
-		return m, cmd
 	}
+	m.applyFilter()
+	return m, tea.Batch(cmd, m.emitCursorChanged())
 }
 
 func (m Model) handleNormal(msg tea.KeyPressMsg) (Model, tea.Cmd) {
 	switch {
 	case key.Matches(msg, m.keymap.Close):
-		if m.filterInput.Value() != "" {
-			m.filterInput.Reset()
+		if m.filter.Value() != "" {
+			m.filter.ClearFilter()
 			m.applyFilter()
 			return m, m.emitCursorChanged()
 		}
 		return m, nil
 
 	case key.Matches(msg, m.keymap.Filter):
-		m.filtering = true
-		m.filterInput.Reset()
-		cmd := m.filterInput.Focus()
+		cmd := m.filter.StartFilter()
 		m.applyFilter()
 		return m, cmd
 
@@ -218,14 +189,14 @@ func (m Model) View() string {
 
 func (m Model) emptyView() string {
 	var msg string
-	if m.filterInput.Value() != "" {
+	if m.filter.Value() != "" {
 		msg = "No matches"
 	} else {
 		msg = "No commits found"
 	}
 	empty := common.TextMuted.Render(msg)
 	if m.showFilterBar() {
-		return empty + "\n" + m.filterInput.View()
+		return empty + "\n" + m.filter.Input.View()
 	}
 	return empty
 }
@@ -266,14 +237,14 @@ func (m Model) renderGraph(entries []jj.GraphEntry) string {
 
 	if m.showFilterBar() {
 		b.WriteString("\n")
-		b.WriteString(m.filterInput.View())
+		b.WriteString(m.filter.Input.View())
 	}
 
 	return b.String()
 }
 
 func (m Model) visibleEntries() []jj.GraphEntry {
-	filter := m.filterInput.Value()
+	filter := m.filter.Value()
 	if filter != "" && len(m.filtered) > 0 {
 		entries := make([]jj.GraphEntry, len(m.filtered))
 		for i, f := range m.filtered {
@@ -288,14 +259,14 @@ func (m Model) visibleEntries() []jj.GraphEntry {
 }
 
 func (m Model) visibleCount() int {
-	if m.filterInput.Value() != "" {
+	if m.filter.Value() != "" {
 		return len(m.filtered)
 	}
 	return len(m.entries)
 }
 
 func (m *Model) applyFilter() {
-	filter := m.filterInput.Value()
+	filter := m.filter.Value()
 	if filter == "" {
 		m.filtered = nil
 		m.cursor = 0
@@ -336,14 +307,11 @@ func filterString(c jj.Commit) string {
 }
 
 func (m Model) showFilterBar() bool {
-	return m.filtering || m.filterInput.Value() != ""
+	return m.filter.Active()
 }
 
 func (m Model) viewportHeight() int {
-	if m.height <= 0 {
-		return 40
-	}
-	return m.height
+	return common.ViewportHeight(m.height)
 }
 
 func (m *Model) ensureVisible() {
