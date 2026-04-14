@@ -18,15 +18,50 @@ A terminal user interface for [Jujutsu (jj)](https://github.com/jj-vcs/jj) versi
 
 The name and logo are inspired by the [tui](<https://en.wikipedia.org/wiki/Tui_(bird)>), a songbird native to New Zealand (one of my favorite places). The jj logo features two birds, so tuitui felt like a natural fit: two tui birds facing each other, with the doubled name mirroring jj's convention of repeating letters.
 
+![Log panel](assets/log.png)
+
 ## Features
 
 - **Graph log** — displays the jj commit graph with full DAG structure, colors, and working copy indicator; fuzzy filtering by change ID, description, bookmarks, or tags
 - **File browser** — lists changed files per revision with status indicators (A/M/D/R), conflict markers, fuzzy filtering, and toggle between changed/all files
 - **Diff panel** — shows syntax-highlighted diffs piped through [delta](https://github.com/dandavison/delta), with side-by-side and inline layouts; plain file view with syntax highlighting via [chroma](https://github.com/alecthomas/chroma)
 - **Command bar** — run any jj command with `:`; includes dynamic completion powered by jj's built-in shell completion engine, ghost text, and a navigable suggestions dropdown
-- **Live updates** — polls the repository for changes and auto-refreshes
+- **Error viewer** — failed jj commands display their output in a full-screen, scrollable panel
+- **Live updates** — polls the repository for changes and auto-refreshes all open panels
 - **Vim-style navigation** — `j`/`k`, `ctrl+u`/`ctrl+d`, `g`/`G`
 - **ANSI palette colors** — adapts to your terminal's color scheme automatically
+
+### File browser
+
+![File browser](assets/files.png)
+
+### All files in revision
+
+![All files](assets/files-all.png)
+
+### Diff panel
+
+![Diff panel](assets/diff.png)
+
+### Plain file viewer
+
+![File viewer](assets/file-viewer.png)
+
+### Fuzzy filter (files)
+
+![Filter files](assets/filter-files.png)
+
+### Fuzzy filter (log)
+
+![Filter log](assets/filter-log.png)
+
+### Command bar
+
+![Command bar](assets/command-bar.png)
+
+### Error panel
+
+![Error panel](assets/error.png)
 
 ## Requirements
 
@@ -129,13 +164,13 @@ tuitui --help
 
 Open with `:` to run any jj command. Completions appear automatically as you type.
 
-| Key                | Action                      |
-| ------------------ | --------------------------- |
-| `esc`              | Close command bar           |
-| `ctrl+space`       | Toggle suggestions dropdown |
-| `ctrl+n`/`ctrl+p`  | Navigate suggestions        |
-| `tab`              | Accept completion           |
-| `enter`            | Run command                 |
+| Key                      | Action                      |
+| ------------------------ | --------------------------- |
+| `esc`                    | Close command bar           |
+| `ctrl+space`             | Toggle suggestions dropdown |
+| `ctrl+n`/`ctrl+p`/arrows | Navigate suggestions        |
+| `tab` or `right`         | Accept completion           |
+| `enter`                  | Run command                 |
 
 ## Contributing
 
