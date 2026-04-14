@@ -20,13 +20,13 @@ The name and logo are inspired by the [tui](<https://en.wikipedia.org/wiki/Tui_(
 
 ## Features
 
-- **Graph log** — displays the jj commit graph with full DAG structure, colors, and working copy indicator
-- **File browser** — lists changed files per revision with status indicators (A/M/D/R), fuzzy filtering, and toggle between changed/all files
-- **Diff panel** — shows syntax-highlighted diffs piped through [delta](https://github.com/dandavison/delta), with side-by-side and inline layouts
+- **Graph log** — displays the jj commit graph with full DAG structure, colors, and working copy indicator; fuzzy filtering by change ID, description, bookmarks, or tags
+- **File browser** — lists changed files per revision with status indicators (A/M/D/R), conflict markers, fuzzy filtering, and toggle between changed/all files
+- **Diff panel** — shows syntax-highlighted diffs piped through [delta](https://github.com/dandavison/delta), with side-by-side and inline layouts; plain file view with syntax highlighting via [chroma](https://github.com/alecthomas/chroma)
 - **Command bar** — run any jj command with `:`; includes dynamic completion powered by jj's built-in shell completion engine, ghost text, and a navigable suggestions dropdown
 - **Live updates** — polls the repository for changes and auto-refreshes
 - **Vim-style navigation** — `j`/`k`, `ctrl+u`/`ctrl+d`, `g`/`G`
-- **Tokyo Night** color palette
+- **ANSI palette colors** — adapts to your terminal's color scheme automatically
 
 ## Requirements
 
@@ -104,9 +104,11 @@ tuitui --help
 
 ### Log panel
 
-| Key | Action                            |
-| --- | --------------------------------- |
-| `z` | Toggle all revisions/current tree |
+| Key   | Action                            |
+| ----- | --------------------------------- |
+| `z`   | Toggle all revisions/current tree |
+| `/`   | Fuzzy filter log                  |
+| `esc` | Clear filter                      |
 
 ### File browser
 
