@@ -106,19 +106,30 @@ func overlayTitle(borderLine, title string) string {
 // HighlightLine applies a background highlight to a line while preserving its
 // existing foreground ANSI colors. It re-injects the background after every
 // ANSI reset so the highlight persists across the entire line.
+//
+// Bright-black foreground is boosted to white so it remains visible against
+// the bright-black background.
 func HighlightLine(line string, width int) string {
 	plainLen := ansi.StringWidth(line)
 	if plainLen < width {
 		line = line + strings.Repeat(" ", width-plainLen)
 	}
 
-	const bgSet = "\x1b[100m" // ANSI color 8 background (bright black / ColorOverlay)
+	bgStyle := ansi.NewStyle().BackgroundColor(ansi.BrightBlack)
+	bgSet := bgStyle.String()
+	brightBlackFg := ansi.NewStyle().ForegroundColor(ansi.BrightBlack).String()
+	brightBlackFgExt := ansi.NewStyle().ForegroundColor(ansi.ExtendedColor(8)).String()
+	whiteFg := ansi.NewStyle().ForegroundColor(ansi.White).String()
+
+	// Boost bright-black foreground to white so it contrasts with the bg.
+	line = strings.ReplaceAll(line, brightBlackFg, whiteFg)
+	line = strings.ReplaceAll(line, brightBlackFgExt, whiteFg)
 
 	highlighted := bgSet +
 		strings.ReplaceAll(
 			strings.ReplaceAll(line, "\x1b[0m", "\x1b[0m"+bgSet),
-			"\x1b[m", "\x1b[m"+bgSet,
-		) + "\x1b[0m"
+			ansi.ResetStyle, ansi.ResetStyle+bgSet,
+		) + ansi.ResetStyle
 
 	return highlighted
 }
