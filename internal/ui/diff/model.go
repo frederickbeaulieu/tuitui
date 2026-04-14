@@ -223,9 +223,8 @@ func (m Model) renderLines() string {
 
 func lineGutter(lineNum, totalLines int) string {
 	w := max(3, len(fmt.Sprintf("%d", totalLines)))
-	const numStyle = "\x1b[90m" // ANSI color 8 (bright black / ColorOverlay)
-	const reset = "\x1b[0m"
-	return fmt.Sprintf("%s%*d%s  ", numStyle, w, lineNum, reset)
+	numStyle := ansi.NewStyle().ForegroundColor(ansi.BrightBlack).String()
+	return fmt.Sprintf("%s%*d%s  ", numStyle, w, lineNum, ansi.ResetStyle)
 }
 
 func (m Model) maxOffset() int {
