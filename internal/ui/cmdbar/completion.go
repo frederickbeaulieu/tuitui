@@ -144,7 +144,7 @@ func formatCompletionLine(item jj.Completion, width int) string {
 
 func styleCompletionLine(line string, index, selected, width int) string {
 	if index == selected {
-		return common.HighlightLine(line, width)
+		return common.HighlightRow(line, width)
 	}
 	return line
 }

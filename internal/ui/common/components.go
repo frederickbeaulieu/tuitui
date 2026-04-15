@@ -8,7 +8,6 @@ import (
 )
 
 // RenderPanel renders content inside a bordered panel with a title.
-// width and height are the total outer dimensions including borders.
 func RenderPanel(title, content string, width, height int, focused bool) string {
 	var borderStyle, titleStyle lipgloss.Style
 	if focused {
@@ -40,8 +39,6 @@ func RenderPanel(title, content string, width, height int, focused bool) string 
 	return rendered
 }
 
-// overlayTitle places a title string over the top border of a panel,
-// preserving ANSI styling on the border line.
 func overlayTitle(borderLine, title string) string {
 	titleVisualWidth := ansi.StringWidth(title)
 	if titleVisualWidth == 0 {
@@ -54,7 +51,7 @@ func overlayTitle(borderLine, title string) string {
 	pos := 0
 	visPos := 0
 
-	// Copy border up to visual position 2, capturing the border color sequence.
+	// Copy border up to visual position 2, capturing the color sequence.
 	for pos < len(runes) && visPos < 2 {
 		if runes[pos] == '\x1b' {
 			start := pos
@@ -74,11 +71,11 @@ func overlayTitle(borderLine, title string) string {
 		pos++
 	}
 
-	// Insert the styled title, then re-apply the border color.
+	// Insert title, restore border color.
 	result = append(result, []rune(title)...)
 	result = append(result, borderColor...)
 
-	// Skip border runes for the visual width of the title.
+	// Skip border runes covered by the title.
 	skipped := 0
 	for pos < len(runes) && skipped < titleVisualWidth {
 		if runes[pos] == '\x1b' {
@@ -95,7 +92,7 @@ func overlayTitle(borderLine, title string) string {
 		pos++
 	}
 
-	// Copy the rest of the border line.
+	// Copy the rest.
 	if pos < len(runes) {
 		result = append(result, runes[pos:]...)
 	}
@@ -103,13 +100,10 @@ func overlayTitle(borderLine, title string) string {
 	return string(result)
 }
 
-// HighlightLine applies a background highlight to a line while preserving its
-// existing foreground ANSI colors. It re-injects the background after every
-// ANSI reset so the highlight persists across the entire line.
-//
-// Bright-black foreground is boosted to white so it remains visible against
-// the bright-black background.
-func HighlightLine(line string, width int) string {
+// HighlightRow applies a background highlight to a row, re-injecting the
+// background after every ANSI reset. Bright-black foreground is boosted to
+// white for contrast.
+func HighlightRow(line string, width int) string {
 	plainLen := ansi.StringWidth(line)
 	if plainLen < width {
 		line = line + strings.Repeat(" ", width-plainLen)
@@ -121,7 +115,7 @@ func HighlightLine(line string, width int) string {
 	brightBlackFgExt := ansi.NewStyle().ForegroundColor(ansi.ExtendedColor(8)).String()
 	whiteFg := ansi.NewStyle().ForegroundColor(ansi.White).String()
 
-	// Boost bright-black foreground to white so it contrasts with the bg.
+	// Boost bright-black foreground to white for contrast.
 	line = strings.ReplaceAll(line, brightBlackFg, whiteFg)
 	line = strings.ReplaceAll(line, brightBlackFgExt, whiteFg)
 

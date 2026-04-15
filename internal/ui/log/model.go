@@ -100,7 +100,7 @@ func (m Model) Update(msg tea.Msg) (Model, tea.Cmd) {
 		if m.cursor >= m.visibleCount() && m.visibleCount() > 0 {
 			m.cursor = m.visibleCount() - 1
 		}
-		return m, m.emitCursorChanged()
+		return m, m.notifyCursorChanged()
 
 	case RepoChangedMsg:
 		return m, tea.Batch(m.fetchEntries(), m.awaitRepoChange())
@@ -133,7 +133,7 @@ func (m Model) handleFilterKey(msg tea.KeyPressMsg) (Model, tea.Cmd) {
 		return m, nil
 	}
 	m.applyFilter()
-	return m, tea.Batch(cmd, m.emitCursorChanged())
+	return m, tea.Batch(cmd, m.notifyCursorChanged())
 }
 
 func (m Model) handleNormal(msg tea.KeyPressMsg) (Model, tea.Cmd) {
@@ -142,7 +142,7 @@ func (m Model) handleNormal(msg tea.KeyPressMsg) (Model, tea.Cmd) {
 		if m.filter.Value() != "" {
 			m.filter.ClearFilter()
 			m.applyFilter()
-			return m, m.emitCursorChanged()
+			return m, m.notifyCursorChanged()
 		}
 		return m, nil
 
@@ -171,7 +171,7 @@ func (m Model) handleNormal(msg tea.KeyPressMsg) (Model, tea.Cmd) {
 	if newCursor, ok := m.keymap.HandleScroll(msg, m.cursor, maxCursor, m.viewportHeight()/4); ok {
 		m.cursor = newCursor
 		m.ensureVisible()
-		return m, m.emitCursorChanged()
+		return m, m.notifyCursorChanged()
 	}
 	return m, nil
 }
@@ -224,7 +224,7 @@ func (m Model) renderGraph(entries []jj.GraphEntry) string {
 
 			displayLine := ansi.Truncate(line, m.width, "")
 			if isCurrent {
-				displayLine = common.HighlightLine(displayLine, m.width)
+				displayLine = common.HighlightRow(displayLine, m.width)
 			}
 
 			if linesUsed > 0 {
@@ -335,7 +335,7 @@ func (m *Model) ensureVisible() {
 	}
 }
 
-func (m *Model) emitCursorChanged() tea.Cmd {
+func (m *Model) notifyCursorChanged() tea.Cmd {
 	id := m.SelectedChangeID()
 	if id == m.prevChangeID {
 		return nil

@@ -8,13 +8,11 @@ import (
 	"github.com/charmbracelet/x/ansi"
 )
 
-// logTemplate is the jj template for structured log output.
-// Fields are tab-separated; explicit tab concatenation is used
-// instead of separate() because separate() skips empty values.
+// Tab-separated jj template. Uses explicit tabs instead of separate()
+// because separate() skips empty values.
 const logTemplate = `change_id ++ "\t" ++ commit_id ++ "\t" ++ if(description, description.first_line(), "") ++ "\t" ++ author.email() ++ "\t" ++ author.timestamp() ++ "\t" ++ bookmarks ++ "\t" ++ tags ++ "\t" ++ if(empty, "true", "false") ++ "\t" ++ if(conflict, "true", "false") ++ "\t" ++ parents.map(|p| p.commit_id()).join(",") ++ "\n"`
 
-// Field indices for the tab-separated logTemplate output.
-// Order must match the template above.
+// Field indices matching the logTemplate order.
 const (
 	fieldChangeID    = iota // 0
 	fieldCommitID           // 1
@@ -26,10 +24,10 @@ const (
 	fieldEmpty              // 7
 	fieldConflict           // 8
 	fieldParents            // 9
-	fieldCount              // total number of fields
+	fieldCount              // total
 )
 
-// jjTimestampLayout is the time format produced by jj's author.timestamp().
+// jjTimestampLayout is the format produced by jj's author.timestamp().
 const jjTimestampLayout = "2006-01-02 15:04:05.000 -07:00"
 
 func (r *Runner) Log(revset string) ([]Commit, error) {
@@ -112,7 +110,7 @@ func splitByRevision(output string, isNewRevision func(line string) bool) [][]st
 }
 
 func splitGraphEntries(output string) [][]string {
-	return splitByRevision(output, hasNodeGlyph)
+	return splitByRevision(output, isRevisionStart)
 }
 
 // splitNoGraphEntries splits --no-graph output into per-revision blocks,
@@ -149,7 +147,7 @@ func matchesChangeID(prefix string, fullIDs []string) bool {
 	return false
 }
 
-func hasNodeGlyph(line string) bool {
+func isRevisionStart(line string) bool {
 	visCount := 0
 	i := 0
 	for i < len(line) && visCount < 10 {
@@ -191,14 +189,11 @@ func parseGraphLogOutput(output string) []Commit {
 		if tab == -1 {
 			continue
 		}
-		// The graph prefix (e.g. "│ ◆  ") is before the first field.
-		// Strip it by finding the change ID right before the first tab.
-		// The change ID is the last space-delimited word before the tab.
+		// Strip graph prefix by finding the changeID before the first tab.
 		prefix := line[:tab]
 		lastSpace := strings.LastIndexByte(prefix, ' ')
 		changeID := prefix[lastSpace+1:]
 
-		// Build a full field slice: [changeID, commitID, desc, ...]
 		fields := append([]string{changeID}, strings.Split(line[tab+1:], "\t")...)
 		if commit, ok := commitFromFields(fields); ok {
 			commits = append(commits, commit)
@@ -225,9 +220,6 @@ func parseLogOutput(output string) ([]Commit, error) {
 	return commits, nil
 }
 
-// commitFromFields parses a Commit from a tab-separated field slice
-// matching the logTemplate field order. Returns false if fields are
-// insufficient.
 func commitFromFields(fields []string) (Commit, bool) {
 	if len(fields) < fieldCount {
 		return Commit{}, false

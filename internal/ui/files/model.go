@@ -289,7 +289,7 @@ func (m Model) renderLine(index int, f jj.FileChange) string {
 	line = ansi.Truncate(line, m.width, "")
 
 	if index == m.cursor {
-		line = common.HighlightLine(line, m.width)
+		line = common.HighlightRow(line, m.width)
 	}
 
 	return line
