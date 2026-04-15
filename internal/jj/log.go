@@ -4,6 +4,8 @@ import (
 	"strings"
 	"time"
 	"unicode/utf8"
+
+	"github.com/charmbracelet/x/ansi"
 )
 
 // logTemplate is the jj template for structured log output.
@@ -47,9 +49,11 @@ func (r *Runner) Log(revset string) ([]Commit, error) {
 func (r *Runner) LogGraphEntries(revset string) ([]GraphEntry, error) {
 	structuredArgs := []string{"log", "-T", logTemplate}
 	graphArgs := []string{"log"}
+	noGraphArgs := []string{"log", "--no-graph"}
 	if revset != "" {
 		structuredArgs = append(structuredArgs, "-r", revset)
 		graphArgs = append(graphArgs, "-r", revset)
+		noGraphArgs = append(noGraphArgs, "-r", revset)
 	}
 
 	structuredOutput, err := r.Run(structuredArgs...)
@@ -64,11 +68,20 @@ func (r *Runner) LogGraphEntries(revset string) ([]GraphEntry, error) {
 	}
 	blocks := splitGraphEntries(graphOutput)
 
+	noGraphOutput, err := r.RunWithColor(noGraphArgs...)
+	if err != nil {
+		return nil, err
+	}
+	noGraphBlocks := splitNoGraphEntries(noGraphOutput, commits)
+
 	entries := make([]GraphEntry, 0, len(blocks))
 	for i, block := range blocks {
 		entry := GraphEntry{Lines: block}
 		if i < len(commits) {
 			entry.Commit = commits[i]
+		}
+		if i < len(noGraphBlocks) {
+			entry.NoGraphLines = noGraphBlocks[i]
 		}
 		entries = append(entries, entry)
 	}
@@ -76,7 +89,8 @@ func (r *Runner) LogGraphEntries(revset string) ([]GraphEntry, error) {
 	return entries, nil
 }
 
-func splitGraphEntries(output string) [][]string {
+// splitByRevision splits output into per-revision blocks of lines.
+func splitByRevision(output string, isNewRevision func(line string) bool) [][]string {
 	lines := strings.Split(output, "\n")
 	if len(lines) > 0 && lines[len(lines)-1] == "" {
 		lines = lines[:len(lines)-1]
@@ -84,26 +98,55 @@ func splitGraphEntries(output string) [][]string {
 
 	var blocks [][]string
 	var current []string
-
 	for _, line := range lines {
-		if hasNodeGlyph(line) {
-			if current != nil {
-				blocks = append(blocks, current)
-			}
-			current = []string{line}
-		} else {
-			if current == nil {
-				current = []string{line}
-			} else {
-				current = append(current, line)
-			}
+		if isNewRevision(line) && current != nil {
+			blocks = append(blocks, current)
+			current = nil
 		}
+		current = append(current, line)
 	}
 	if current != nil {
 		blocks = append(blocks, current)
 	}
-
 	return blocks
+}
+
+func splitGraphEntries(output string) [][]string {
+	return splitByRevision(output, hasNodeGlyph)
+}
+
+// splitNoGraphEntries splits --no-graph output into per-revision blocks,
+// matching displayed short changeID prefixes against full IDs.
+func splitNoGraphEntries(output string, commits []Commit) [][]string {
+	if len(commits) == 0 {
+		return nil
+	}
+
+	fullIDs := make([]string, len(commits))
+	for i, c := range commits {
+		fullIDs[i] = c.ChangeID
+	}
+
+	return splitByRevision(output, func(line string) bool {
+		plain := ansi.Strip(line)
+		firstWord := plain
+		if sp := strings.IndexByte(plain, ' '); sp != -1 {
+			firstWord = plain[:sp]
+		}
+		return matchesChangeID(firstWord, fullIDs)
+	})
+}
+
+func matchesChangeID(prefix string, fullIDs []string) bool {
+	if prefix == "" {
+		return false
+	}
+	for _, id := range fullIDs {
+		if strings.HasPrefix(id, prefix) {
+			return true
+		}
+	}
+	return false
 }
 
 func hasNodeGlyph(line string) bool {

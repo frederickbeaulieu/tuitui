@@ -24,6 +24,7 @@ type FileChange struct {
 
 // GraphEntry pairs a Commit with its ANSI-colored graph lines from jj log.
 type GraphEntry struct {
-	Commit Commit
-	Lines  []string
+	Commit       Commit
+	Lines        []string // graph lines from jj log --color=always
+	NoGraphLines []string // lines from jj log --no-graph --color=always
 }
