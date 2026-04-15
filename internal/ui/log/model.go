@@ -2,13 +2,11 @@
 package log
 
 import (
-	"sort"
 	"strings"
 
 	"charm.land/bubbles/v2/key"
 	tea "charm.land/bubbletea/v2"
 	"github.com/charmbracelet/x/ansi"
-	"github.com/sahilm/fuzzy"
 
 	"github.com/frederickbeaulieu/tuitui/internal/jj"
 	"github.com/frederickbeaulieu/tuitui/internal/ui/common"
@@ -29,10 +27,6 @@ type CursorChangedMsg struct {
 
 type LogSelectMsg struct {
 	ChangeID string
-}
-
-type filteredEntry struct {
-	entry jj.GraphEntry
 }
 
 type Model struct {
@@ -180,11 +174,13 @@ func (m Model) View() string {
 	if m.err != nil {
 		return common.ConflictStyle.Render("Error: " + m.err.Error())
 	}
-	entries := m.visibleEntries()
-	if len(entries) == 0 {
+	if m.hasFilter() && len(m.filtered) == 0 {
 		return m.emptyView()
 	}
-	return m.renderGraph(entries)
+	if m.visibleCount() == 0 {
+		return m.emptyView()
+	}
+	return m.renderEntries()
 }
 
 func (m Model) emptyView() string {
@@ -201,7 +197,11 @@ func (m Model) emptyView() string {
 	return empty
 }
 
-func (m Model) renderGraph(entries []jj.GraphEntry) string {
+func (m Model) hasFilter() bool {
+	return m.filter.Value() != ""
+}
+
+func (m Model) renderEntries() string {
 	available := m.viewportHeight()
 	if available <= 0 {
 		return ""
@@ -210,14 +210,23 @@ func (m Model) renderGraph(entries []jj.GraphEntry) string {
 		available--
 	}
 
+	filtering := m.hasFilter()
+	entries := m.visibleEntries()
 	var b strings.Builder
 	linesUsed := 0
 
 	for i := m.offset; i < len(entries) && linesUsed < available; i++ {
-		entry := entries[i]
 		isCurrent := i == m.cursor
 
-		for _, line := range entry.Lines {
+		var lines []string
+		if filtering && i < len(m.filtered) {
+			lines = m.displayLines(m.filtered[i].entry)
+			lines = common.HighlightMatches(lines, m.filtered[i].matchedIndexes)
+		} else {
+			lines = entries[i].Lines
+		}
+
+		for _, line := range lines {
 			if linesUsed >= available {
 				break
 			}
@@ -265,47 +274,6 @@ func (m Model) visibleCount() int {
 	return len(m.entries)
 }
 
-func (m *Model) applyFilter() {
-	filter := m.filter.Value()
-	if filter == "" {
-		m.filtered = nil
-		m.cursor = 0
-		m.offset = 0
-		return
-	}
-
-	searchStrings := make([]string, len(m.entries))
-	for i, e := range m.entries {
-		searchStrings[i] = filterString(e.Commit)
-	}
-
-	matches := fuzzy.Find(filter, searchStrings)
-	sort.Slice(matches, func(i, j int) bool {
-		return matches[i].Index < matches[j].Index
-	})
-
-	m.filtered = make([]filteredEntry, len(matches))
-	for i, match := range matches {
-		m.filtered[i] = filteredEntry{
-			entry: m.entries[match.Index],
-		}
-	}
-
-	m.cursor = 0
-	m.offset = 0
-}
-
-func filterString(c jj.Commit) string {
-	s := c.ChangeID + " " + c.Description
-	if len(c.Bookmarks) > 0 {
-		s += " " + strings.Join(c.Bookmarks, " ")
-	}
-	if len(c.Tags) > 0 {
-		s += " " + strings.Join(c.Tags, " ")
-	}
-	return s
-}
-
 func (m Model) showFilterBar() bool {
 	return m.filter.Active()
 }
@@ -322,7 +290,7 @@ func (m *Model) ensureVisible() {
 	entries := m.visibleEntries()
 	linesNeeded := 0
 	for i := m.offset; i <= m.cursor && i < len(entries); i++ {
-		linesNeeded += len(entries[i].Lines)
+		linesNeeded += len(m.displayLines(entries[i]))
 	}
 
 	available := m.viewportHeight()
@@ -330,9 +298,17 @@ func (m *Model) ensureVisible() {
 		available--
 	}
 	for linesNeeded > available && m.offset < m.cursor {
-		linesNeeded -= len(entries[m.offset].Lines)
+		linesNeeded -= len(m.displayLines(entries[m.offset]))
 		m.offset++
 	}
+}
+
+// displayLines returns no-graph lines when filtering, graph lines otherwise.
+func (m Model) displayLines(e jj.GraphEntry) []string {
+	if m.hasFilter() && len(e.NoGraphLines) > 0 {
+		return e.NoGraphLines
+	}
+	return e.Lines
 }
 
 func (m *Model) notifyCursorChanged() tea.Cmd {
