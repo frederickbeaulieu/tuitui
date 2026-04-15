@@ -7,7 +7,6 @@ import (
 
 	"charm.land/bubbles/v2/key"
 	tea "charm.land/bubbletea/v2"
-	"charm.land/lipgloss/v2"
 	"github.com/charmbracelet/x/ansi"
 	"github.com/sahilm/fuzzy"
 
@@ -279,7 +278,7 @@ func (m Model) renderLine(index int, f jj.FileChange) string {
 
 	var line string
 	if len(matchedIndexes) > 0 {
-		line = fmt.Sprintf("%s %s", common.FileStatusSymbol(f.Status), highlightMatches(f.Path, matchedIndexes))
+		line = fmt.Sprintf("%s %s", common.FileStatusSymbol(f.Status), common.HighlightMatches([]string{f.Path}, matchedIndexes)[0])
 	} else {
 		line = fmt.Sprintf("%s %s", common.FileStatusSymbol(f.Status), f.Path)
 	}
@@ -367,11 +366,6 @@ func (m *Model) ensureVisible() {
 	if m.cursor >= m.offset+visible {
 		m.offset = m.cursor - visible + 1
 	}
-}
-
-func highlightMatches(path string, indexes []int) string {
-	matched := lipgloss.NewStyle().Foreground(common.ColorMauve).Bold(true)
-	return lipgloss.StyleRunes(path, indexes, matched, lipgloss.NewStyle())
 }
 
 // mergeFileStatuses overlays change statuses (A/M/D/R) from ChangedFiles onto

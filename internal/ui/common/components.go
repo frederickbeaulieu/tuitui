@@ -127,3 +127,78 @@ func HighlightRow(line string, width int) string {
 
 	return highlighted
 }
+
+// HighlightMatches applies mauve/bold styling to matched character positions
+// in ANSI-colored lines. Positions are indices into the joined plain text
+// of all lines (separated by " ").
+func HighlightMatches(lines []string, matchedPositions []int) []string {
+	if len(matchedPositions) == 0 || len(lines) == 0 {
+		return lines
+	}
+
+	matchSet := make(map[int]bool, len(matchedPositions))
+	for _, p := range matchedPositions {
+		matchSet[p] = true
+	}
+
+	highlightStart := ansi.NewStyle().ForegroundColor(ansi.ExtendedColor(13)).Bold().String()
+	highlightEnd := ansi.ResetStyle
+
+	result := make([]string, len(lines))
+	visPos := 0
+
+	for lineIdx, line := range lines {
+		if lineIdx > 0 {
+			visPos++ // account for " " separator
+		}
+
+		var b strings.Builder
+		var savedStyle string
+		var state byte
+		p := ansi.NewParser()
+
+		for len(line) > 0 {
+			seq, width, n, newState := ansi.DecodeSequence(line, state, p)
+			state = newState
+
+			if width == 0 {
+				b.WriteString(seq)
+				if ansi.HasCsiPrefix(seq) {
+					if isSGRReset(p) {
+						savedStyle = ""
+					} else {
+						savedStyle += seq
+					}
+				}
+			} else {
+				// Printable grapheme.
+				if matchSet[visPos] {
+					b.WriteString(highlightStart)
+					b.WriteString(seq)
+					b.WriteString(highlightEnd)
+					if savedStyle != "" {
+						b.WriteString(savedStyle)
+					}
+				} else {
+					b.WriteString(seq)
+				}
+				visPos++
+			}
+			line = line[n:]
+		}
+
+		result[lineIdx] = b.String()
+	}
+
+	return result
+}
+
+// isSGRReset returns true if the parser just decoded an SGR reset
+// sequence (\x1b[m or \x1b[0m).
+func isSGRReset(p *ansi.Parser) bool {
+	if p.Command()&0xff != 'm' {
+		return false
+	}
+	params := p.Params()
+	return len(params) == 0 || (len(params) == 1 && params[0] == 0)
+}
