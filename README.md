@@ -29,6 +29,7 @@ The name and logo are inspired by the [tui](<https://en.wikipedia.org/wiki/Tui_(
 - **Error viewer** — failed jj commands display their output in a full-screen, scrollable panel
 - **Live updates** — polls the repository for changes and auto-refreshes all open panels
 - **Vim-style navigation** — `j`/`k`, `ctrl+u`/`ctrl+d`, `g`/`G`
+- **Mouse support** — scroll with the mouse wheel, click to select entries, click an already-selected item to open it, and click on a panel to focus it in split view
 - **ANSI palette colors** — adapts to your terminal's color scheme automatically
 
 ### File browser

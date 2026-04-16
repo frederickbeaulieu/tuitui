@@ -66,8 +66,16 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		if model, cmd, ok := m.handleKey(msg); ok {
 			return model, cmd
 		}
+	case tea.MouseClickMsg:
+		if cmd := m.handleMouseFocus(msg); cmd != nil {
+			cmds = appendCmd(cmds, cmd)
+		}
+	case tea.MouseWheelMsg:
+		m.handleWheelFocus(msg)
 	case logpanel.LogSelectMsg:
 		return m.handleLogSelect(msg)
+	case logpanel.LogToggleMsg:
+		return m.handleLogToggle(msg)
 	case files.FileSelectedMsg:
 		return m.handleFileSelected(msg)
 	case files.FilesCloseMsg:
@@ -115,6 +123,35 @@ func (m *Model) updateCmdbar(msg tea.Msg) (tea.Cmd, bool) {
 	return nil, false
 }
 
+func (m *Model) handleMouseFocus(msg tea.MouseClickMsg) tea.Cmd {
+	if m.mode != modeFiles {
+		return nil
+	}
+	logWidth, _ := m.splitWidths()
+	if msg.X < logWidth && !m.log.Focused() {
+		m.log.Focus()
+		m.files.Blur()
+	} else if msg.X >= logWidth && !m.files.Focused() {
+		m.files.Focus()
+		m.log.Blur()
+	}
+	return nil
+}
+
+func (m *Model) handleWheelFocus(msg tea.MouseWheelMsg) {
+	if m.mode != modeFiles {
+		return
+	}
+	logWidth, _ := m.splitWidths()
+	if msg.X < logWidth && !m.log.Focused() {
+		m.log.Focus()
+		m.files.Blur()
+	} else if msg.X >= logWidth && !m.files.Focused() {
+		m.files.Focus()
+		m.log.Blur()
+	}
+}
+
 func (m *Model) handleResize(msg tea.WindowSizeMsg) (Model, tea.Cmd) {
 	m.width = msg.Width
 	m.height = msg.Height
@@ -139,6 +176,15 @@ func (m *Model) handleKey(msg tea.KeyPressMsg) (Model, tea.Cmd, bool) {
 }
 
 func (m *Model) handleLogSelect(msg logpanel.LogSelectMsg) (Model, tea.Cmd) {
+	m.setMode(modeFiles)
+	return *m, m.files.SetRevision(msg.ChangeID)
+}
+
+func (m *Model) handleLogToggle(msg logpanel.LogToggleMsg) (Model, tea.Cmd) {
+	if m.mode == modeFiles {
+		m.setMode(modeLog)
+		return *m, nil
+	}
 	m.setMode(modeFiles)
 	return *m, m.files.SetRevision(msg.ChangeID)
 }

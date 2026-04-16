@@ -29,6 +29,12 @@ type LogSelectMsg struct {
 	ChangeID string
 }
 
+// LogToggleMsg is sent when the user clicks on the already-selected log entry,
+// signaling the app to toggle the files panel.
+type LogToggleMsg struct {
+	ChangeID string
+}
+
 type Model struct {
 	runner       *jj.Runner
 	watcher      *jj.RepoWatcher
@@ -104,6 +110,24 @@ func (m Model) Update(msg tea.Msg) (Model, tea.Cmd) {
 			return m, nil
 		}
 		return m.handleKey(msg)
+
+	case tea.MouseWheelMsg:
+		if !m.focused {
+			return m, nil
+		}
+		maxCursor := m.visibleCount() - 1
+		if newCursor, ok := common.HandleMouseWheel(msg, m.cursor, maxCursor, 3); ok {
+			m.cursor = newCursor
+			m.ensureVisible()
+			return m, m.notifyCursorChanged()
+		}
+		return m, nil
+
+	case tea.MouseClickMsg:
+		if !m.focused {
+			return m, nil
+		}
+		return m.handleClick(msg)
 	}
 
 	if m.filter.Filtering {
@@ -112,6 +136,47 @@ func (m Model) Update(msg tea.Msg) (Model, tea.Cmd) {
 	}
 
 	return m, nil
+}
+
+func (m Model) handleClick(msg tea.MouseClickMsg) (Model, tea.Cmd) {
+	if msg.Button != tea.MouseLeft {
+		return m, nil
+	}
+	// Map the click Y to an entry index by walking visible entries.
+	y := msg.Y - 1 // account for panel border
+	if y < 0 {
+		return m, nil
+	}
+
+	entries := m.visibleEntries()
+	linesUsed := 0
+	clickedIdx := -1
+	for i := m.offset; i < len(entries); i++ {
+		entryLines := len(m.displayLines(entries[i]))
+		if y < linesUsed+entryLines {
+			clickedIdx = i
+			break
+		}
+		linesUsed += entryLines
+	}
+	if clickedIdx < 0 {
+		return m, nil
+	}
+
+	wasAlreadySelected := clickedIdx == m.cursor
+	m.cursor = clickedIdx
+	m.ensureVisible()
+
+	if wasAlreadySelected {
+		id := m.SelectedChangeID()
+		if id != "" {
+			return m, func() tea.Msg {
+				return LogToggleMsg{ChangeID: id}
+			}
+		}
+	}
+
+	return m, m.notifyCursorChanged()
 }
 
 func (m Model) handleKey(msg tea.KeyPressMsg) (Model, tea.Cmd) {

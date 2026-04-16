@@ -166,6 +166,19 @@ func (km KeyMap) HandleScroll(msg tea.KeyPressMsg, pos, maxPos, halfPage int) (i
 	return pos, false
 }
 
+// HandleMouseWheel matches a mouse wheel event and returns the updated
+// position. scrollAmount controls how many lines each wheel tick moves.
+// Returns (position, true) if the event was handled.
+func HandleMouseWheel(msg tea.MouseWheelMsg, pos, maxPos, scrollAmount int) (int, bool) {
+	switch msg.Button {
+	case tea.MouseWheelDown:
+		return Clamp(pos+scrollAmount, 0, maxPos), true
+	case tea.MouseWheelUp:
+		return Clamp(pos-scrollAmount, 0, maxPos), true
+	}
+	return pos, false
+}
+
 func Clamp(v, lo, hi int) int {
 	return max(lo, min(v, hi))
 }

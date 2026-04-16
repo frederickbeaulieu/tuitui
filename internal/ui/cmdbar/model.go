@@ -106,6 +106,10 @@ func (m Model) Update(msg tea.Msg) (Model, tea.Cmd) {
 		if m.active {
 			return m.handleInputKey(msg)
 		}
+	case tea.MouseWheelMsg:
+		if m.showingError {
+			return m.handleErrorMouseWheel(msg)
+		}
 	}
 
 	if m.active {

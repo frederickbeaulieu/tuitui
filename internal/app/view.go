@@ -31,6 +31,7 @@ func (m Model) View() tea.View {
 
 	v := tea.NewView(content)
 	v.AltScreen = true
+	v.MouseMode = tea.MouseModeCellMotion
 	if m.cmdbar.Active() {
 		if c := m.cmdbar.Cursor(); c != nil {
 			c.Position.Y += panelHeight + completionHeight
@@ -47,6 +48,7 @@ func (m Model) viewError(panelHeight int) tea.View {
 	content := lipgloss.JoinVertical(lipgloss.Left, errorPanel, statusBar)
 	v := tea.NewView(content)
 	v.AltScreen = true
+	v.MouseMode = tea.MouseModeCellMotion
 	return v
 }
 

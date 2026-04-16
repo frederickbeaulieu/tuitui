@@ -143,6 +143,15 @@ func (m Model) Update(msg tea.Msg) (Model, tea.Cmd) {
 			return m, nil
 		}
 		return m.handleKey(msg)
+
+	case tea.MouseWheelMsg:
+		if !m.focused {
+			return m, nil
+		}
+		if newOffset, ok := common.HandleMouseWheel(msg, m.offset, m.maxOffset(), 3); ok {
+			m.offset = newOffset
+		}
+		return m, nil
 	}
 
 	return m, nil

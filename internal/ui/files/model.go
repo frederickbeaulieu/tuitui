@@ -143,11 +143,57 @@ func (m Model) Update(msg tea.Msg) (Model, tea.Cmd) {
 			return m, nil
 		}
 		return m.handleKey(msg)
+
+	case tea.MouseWheelMsg:
+		if !m.focused {
+			return m, nil
+		}
+		maxCursor := m.visibleCount() - 1
+		if newCursor, ok := common.HandleMouseWheel(msg, m.cursor, maxCursor, 3); ok {
+			m.cursor = newCursor
+			m.ensureVisible()
+		}
+		return m, nil
+
+	case tea.MouseClickMsg:
+		if !m.focused {
+			return m, nil
+		}
+		return m.handleClick(msg)
 	}
 
 	if m.filter.Filtering {
 		cmd := m.filter.Update(msg)
 		return m, cmd
+	}
+
+	return m, nil
+}
+
+func (m Model) handleClick(msg tea.MouseClickMsg) (Model, tea.Cmd) {
+	if msg.Button != tea.MouseLeft {
+		return m, nil
+	}
+	y := msg.Y - 1 // account for panel border
+	if y < 0 {
+		return m, nil
+	}
+	index := m.offset + y
+	if index >= m.visibleCount() {
+		return m, nil
+	}
+
+	wasAlreadySelected := index == m.cursor
+	m.cursor = index
+	m.ensureVisible()
+
+	if wasAlreadySelected {
+		if f := m.SelectedFile(); f != nil {
+			changed := f.Status != " "
+			return m, func() tea.Msg {
+				return FileSelectedMsg{ChangeID: m.changeID, Path: f.Path, Changed: changed}
+			}
+		}
 	}
 
 	return m, nil

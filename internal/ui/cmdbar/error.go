@@ -38,6 +38,13 @@ func (m Model) handleErrorViewerKey(msg tea.KeyPressMsg) (Model, tea.Cmd) {
 	return m, nil
 }
 
+func (m Model) handleErrorMouseWheel(msg tea.MouseWheelMsg) (Model, tea.Cmd) {
+	if newOffset, ok := common.HandleMouseWheel(msg, m.scroll, len(m.lines)-1, 3); ok {
+		m.scroll = newOffset
+	}
+	return m, nil
+}
+
 func errorStatusBinds(km common.KeyMap) []key.Help {
 	binds := []key.Help{
 		km.ClosePanel.Help(),
