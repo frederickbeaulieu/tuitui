@@ -12,6 +12,7 @@ import (
 	"github.com/frederickbeaulieu/tuitui/internal/ui/diff"
 	"github.com/frederickbeaulieu/tuitui/internal/ui/files"
 	logpanel "github.com/frederickbeaulieu/tuitui/internal/ui/log"
+	"github.com/frederickbeaulieu/tuitui/internal/ui/prompt"
 )
 
 const statusBarHeight = 1
@@ -30,6 +31,7 @@ type Model struct {
 	files  files.Model
 	diff   diff.Model
 	cmdbar cmdbar.Model
+	prompt prompt.Model
 	mode   mode
 	width  int
 	height int
@@ -53,6 +55,7 @@ func New(runner *jj.Runner, watcher *jj.RepoWatcher) Model {
 		files:  files.New(runner),
 		diff:   diff.New(runner),
 		cmdbar: cmdbar.New(runner),
+		prompt: prompt.New(),
 		mode:   modeLog,
 		keymap: common.DefaultKeyMap(),
 		runner: runner,
@@ -67,7 +70,13 @@ func (m Model) Init() tea.Cmd {
 func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	var cmds []tea.Cmd
 
-	cmd, handled := m.updateCmdbar(msg)
+	cmd, handled := m.updatePrompt(msg)
+	cmds = appendCmd(cmds, cmd)
+	if handled {
+		return m, tea.Batch(cmds...)
+	}
+
+	cmd, handled = m.updateCmdbar(msg)
 	cmds = appendCmd(cmds, cmd)
 	if handled {
 		return m, tea.Batch(cmds...)
@@ -115,7 +124,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m.handleEditProceed(msg)
 	case editFinishedMsg:
 		return m.handleEditFinished(msg)
-	case cmdbar.PromptResultMsg:
+	case prompt.ResultMsg:
 		return m.handlePromptResult(msg)
 	case files.FilesCloseMsg:
 		return m.handleFilesClose()
@@ -138,6 +147,24 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	return m, tea.Batch(cmds...)
 }
 
+// updatePrompt routes messages to the prompt overlay.
+//
+// When the prompt is active it captures all key events modally: the
+// second return value is true so the caller skips further dispatch.
+// For non-key messages we always forward to the prompt so its internal
+// activate/result lifecycle can progress, but we never report them as
+// handled — other panels may also need them.
+func (m *Model) updatePrompt(msg tea.Msg) (tea.Cmd, bool) {
+	_, isKey := msg.(tea.KeyPressMsg)
+	if !m.prompt.Active() && isKey {
+		return nil, false
+	}
+	var cmd tea.Cmd
+	m.prompt, cmd = m.prompt.Update(msg)
+	// Key events while active are modal: consume them here.
+	return cmd, isKey
+}
+
 func (m *Model) updateCmdbar(msg tea.Msg) (tea.Cmd, bool) {
 	switch msg.(type) {
 	case cmdbar.CmdResultMsg, cmdbar.CmdCloseMsg, cmdbar.CompletionMsg:
@@ -146,7 +173,7 @@ func (m *Model) updateCmdbar(msg tea.Msg) (tea.Cmd, bool) {
 		m.layoutPanels()
 		return cmd, false
 	case tea.KeyPressMsg:
-		if m.cmdbar.Active() || m.cmdbar.ShowingError() || m.cmdbar.Prompting() {
+		if m.cmdbar.Active() || m.cmdbar.ShowingError() {
 			var cmd tea.Cmd
 			m.cmdbar, cmd = m.cmdbar.Update(msg)
 			m.layoutPanels()
@@ -291,7 +318,7 @@ func (m Model) splitWidths() (int, int) {
 
 func (m Model) panelHeight() int {
 	bottomHeight := statusBarHeight
-	if m.cmdbar.Active() || m.cmdbar.Prompting() {
+	if m.cmdbar.Active() {
 		bottomHeight = cmdbarHeight
 	}
 	availableHeight := m.height - bottomHeight

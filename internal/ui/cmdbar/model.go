@@ -29,10 +29,6 @@ type Model struct {
 	lines        []string
 	width        int
 	height       int
-
-	prompting     bool
-	promptToken   string
-	promptMessage string
 }
 
 func New(runner *jj.Runner) Model {
@@ -104,9 +100,6 @@ func (m Model) Update(msg tea.Msg) (Model, tea.Cmd) {
 		}
 		return m, nil
 	case tea.KeyPressMsg:
-		if m.prompting {
-			return m.handlePromptKey(msg)
-		}
 		if m.showingError {
 			return m.handleErrorViewerKey(msg)
 		}

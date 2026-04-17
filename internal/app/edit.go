@@ -8,10 +8,11 @@ import (
 
 	"github.com/frederickbeaulieu/tuitui/internal/ui/cmdbar"
 	"github.com/frederickbeaulieu/tuitui/internal/ui/files"
+	"github.com/frederickbeaulieu/tuitui/internal/ui/prompt"
 )
 
 // promptTokenEdit identifies the "edit this revision?" prompt in
-// cmdbar.PromptResultMsg. The cmdbar is agnostic to the prompt's
+// prompt.ResultMsg. The prompt package is agnostic to a prompt's
 // semantics; the token is how the app correlates a result back to
 // its originating request.
 const promptTokenEdit = "edit-file"
@@ -86,7 +87,7 @@ func (m *Model) handleEditImmutableCheck(msg editImmutableCheckMsg) (Model, tea.
 	// Need confirmation to move the working copy.
 	m.pendEdit = &pendingEdit{changeID: msg.changeID, path: msg.path}
 	promptMsg := fmt.Sprintf("jj edit %s and open %s?", shortID(msg.changeID), msg.path)
-	cmd := m.cmdbar.StartPrompt(promptTokenEdit, promptMsg)
+	cmd := prompt.Start(promptTokenEdit, promptMsg)
 	m.layoutPanels()
 	return *m, cmd
 }
@@ -102,7 +103,7 @@ func shortID(id string) string {
 	return id[:n]
 }
 
-func (m *Model) handlePromptResult(msg cmdbar.PromptResultMsg) (Model, tea.Cmd) {
+func (m *Model) handlePromptResult(msg prompt.ResultMsg) (Model, tea.Cmd) {
 	if msg.Token != promptTokenEdit {
 		return *m, nil
 	}

@@ -9,6 +9,7 @@ import (
 	"github.com/charmbracelet/x/ansi"
 
 	"github.com/frederickbeaulieu/tuitui/internal/ui/common"
+	"github.com/frederickbeaulieu/tuitui/internal/ui/overlay"
 )
 
 func (m Model) View() tea.View {
@@ -27,6 +28,10 @@ func (m Model) View() tea.View {
 		content = lipgloss.JoinVertical(lipgloss.Left, mainPanel, suggestionsPanel, bottomBar)
 	} else {
 		content = lipgloss.JoinVertical(lipgloss.Left, mainPanel, bottomBar)
+	}
+
+	if layer := m.prompt.Overlay(m.width, m.height); layer != nil {
+		content = overlay.Composite(content, m.width, m.height, layer)
 	}
 
 	v := tea.NewView(content)
@@ -53,10 +58,6 @@ func (m Model) viewError(panelHeight int) tea.View {
 }
 
 func (m Model) viewBottomBar() string {
-	if m.cmdbar.Prompting() {
-		statusBar := m.renderStatusBarWith(m.cmdbar.PromptStatusBinds())
-		return lipgloss.JoinVertical(lipgloss.Left, m.cmdbar.PromptView(), statusBar)
-	}
 	if m.cmdbar.Active() {
 		statusBar := m.renderStatusBarWith(m.cmdbar.InputStatusBinds())
 		return lipgloss.JoinVertical(lipgloss.Left, m.cmdbar.InputView(), statusBar)
