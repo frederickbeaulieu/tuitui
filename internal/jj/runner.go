@@ -6,6 +6,8 @@ import (
 	"fmt"
 	"os/exec"
 	"strings"
+
+	"github.com/charmbracelet/x/ansi"
 )
 
 type Completion struct {
@@ -23,11 +25,15 @@ func NewRunner(repoPath string) *Runner {
 }
 
 func (r *Runner) Run(args ...string) (string, error) {
-	return r.run("never", args...)
+	out, err := r.run(args...)
+	if err != nil {
+		return "", err
+	}
+	return ansi.Strip(out), nil
 }
 
 func (r *Runner) RunWithColor(args ...string) (string, error) {
-	return r.run("always", args...)
+	return r.run(args...)
 }
 
 // Complete queries jj's shell completion engine for suggestions.
@@ -79,8 +85,8 @@ func parseCompletions(output string) []Completion {
 	return completions
 }
 
-func (r *Runner) run(color string, args ...string) (string, error) {
-	baseArgs := []string{"--no-pager", "--color", color}
+func (r *Runner) run(args ...string) (string, error) {
+	baseArgs := []string{"--no-pager", "--color", "always"}
 	if r.RepoPath != "" {
 		baseArgs = append(baseArgs, "-R", r.RepoPath)
 	}
