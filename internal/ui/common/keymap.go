@@ -49,6 +49,7 @@ type KeyMap struct {
 	Top            key.Binding
 	Bottom         key.Binding
 	Command        key.Binding
+	Edit           key.Binding
 	CompleteTab    key.Binding
 	CompleteNext   key.Binding
 	CompletePrev   key.Binding
@@ -108,6 +109,10 @@ func DefaultKeyMap() KeyMap {
 		Command: key.NewBinding(
 			key.WithKeys(":"),
 			key.WithHelp(":", "command"),
+		),
+		Edit: key.NewBinding(
+			key.WithKeys("e"),
+			key.WithHelp("e", "edit"),
 		),
 		CompleteTab: key.NewBinding(
 			key.WithKeys("tab"),

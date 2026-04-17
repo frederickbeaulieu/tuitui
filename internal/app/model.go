@@ -5,6 +5,7 @@ import (
 	"charm.land/bubbles/v2/key"
 	tea "charm.land/bubbletea/v2"
 
+	"github.com/frederickbeaulieu/tuitui/internal/editor"
 	"github.com/frederickbeaulieu/tuitui/internal/jj"
 	"github.com/frederickbeaulieu/tuitui/internal/ui/cmdbar"
 	"github.com/frederickbeaulieu/tuitui/internal/ui/common"
@@ -33,6 +34,17 @@ type Model struct {
 	width  int
 	height int
 	keymap common.KeyMap
+
+	runner   *jj.Runner
+	editor   *editor.Resolver
+	pendEdit *pendingEdit
+}
+
+// pendingEdit is the state kept between the confirm prompt being shown
+// and the user accepting or rejecting it.
+type pendingEdit struct {
+	changeID string
+	path     string
 }
 
 func New(runner *jj.Runner, watcher *jj.RepoWatcher) Model {
@@ -43,6 +55,8 @@ func New(runner *jj.Runner, watcher *jj.RepoWatcher) Model {
 		cmdbar: cmdbar.New(runner),
 		mode:   modeLog,
 		keymap: common.DefaultKeyMap(),
+		runner: runner,
+		editor: editor.NewResolver(func() string { return runner.ConfigGet("ui.editor") }),
 	}
 }
 
@@ -76,8 +90,33 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m.handleLogSelect(msg)
 	case logpanel.LogToggleMsg:
 		return m.handleLogToggle(msg)
+	case logpanel.LogEditMsg:
+		return m.handleLogEditRequest(msg.ChangeID)
+	case logEditCheckMsg:
+		return m.handleLogEditCheck(msg)
+	case logEditDoneMsg:
+		return m.handleLogEditDone(msg)
 	case files.FileSelectedMsg:
 		return m.handleFileSelected(msg)
+	case files.FileEditRequestMsg:
+		return m.handleFileEditRequest(msg)
+	case diff.EditRequestMsg:
+		return m.handleFileEditRequest(files.FileEditRequestMsg{
+			ChangeID: msg.ChangeID,
+			Path:     msg.Path,
+			// Status unknown here; diff view only reaches a file with
+			// viewable content, so deletion-check is skipped. If the
+			// file really was deleted the subsequent editor invocation
+			// will simply create an empty file.
+		})
+	case editImmutableCheckMsg:
+		return m.handleEditImmutableCheck(msg)
+	case editProceedMsg:
+		return m.handleEditProceed(msg)
+	case editFinishedMsg:
+		return m.handleEditFinished(msg)
+	case cmdbar.PromptResultMsg:
+		return m.handlePromptResult(msg)
 	case files.FilesCloseMsg:
 		return m.handleFilesClose()
 	case diff.DiffCloseMsg:
@@ -107,7 +146,7 @@ func (m *Model) updateCmdbar(msg tea.Msg) (tea.Cmd, bool) {
 		m.layoutPanels()
 		return cmd, false
 	case tea.KeyPressMsg:
-		if m.cmdbar.Active() || m.cmdbar.ShowingError() {
+		if m.cmdbar.Active() || m.cmdbar.ShowingError() || m.cmdbar.Prompting() {
 			var cmd tea.Cmd
 			m.cmdbar, cmd = m.cmdbar.Update(msg)
 			m.layoutPanels()
@@ -252,7 +291,7 @@ func (m Model) splitWidths() (int, int) {
 
 func (m Model) panelHeight() int {
 	bottomHeight := statusBarHeight
-	if m.cmdbar.Active() {
+	if m.cmdbar.Active() || m.cmdbar.Prompting() {
 		bottomHeight = cmdbarHeight
 	}
 	availableHeight := m.height - bottomHeight

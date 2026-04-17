@@ -30,6 +30,13 @@ type DiffContentMsg struct {
 
 type DiffCloseMsg struct{}
 
+// EditRequestMsg is emitted when the user presses `e` in the diff panel,
+// asking the app to open the currently-displayed file in $EDITOR.
+type EditRequestMsg struct {
+	ChangeID string
+	Path     string
+}
+
 type layout int
 
 const (
@@ -161,6 +168,16 @@ func (m Model) handleKey(msg tea.KeyPressMsg) (Model, tea.Cmd) {
 	switch {
 	case key.Matches(msg, m.keymap.Back):
 		return m, func() tea.Msg { return DiffCloseMsg{} }
+
+	case key.Matches(msg, m.keymap.Edit):
+		if m.changeID == "" || m.filePath == "" {
+			return m, nil
+		}
+		changeID := m.changeID
+		path := m.filePath
+		return m, func() tea.Msg {
+			return EditRequestMsg{ChangeID: changeID, Path: path}
+		}
 
 	case key.Matches(msg, m.keymap.ToggleLayout):
 		if m.plainFile {

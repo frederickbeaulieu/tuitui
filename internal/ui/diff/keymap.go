@@ -41,5 +41,6 @@ func (km KeyMap) StatusBinds(showFullFile bool, plainFile bool) []key.Help {
 			context,
 		)
 	}
+	binds = append(binds, km.Edit.Help())
 	return binds
 }

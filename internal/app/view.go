@@ -53,6 +53,10 @@ func (m Model) viewError(panelHeight int) tea.View {
 }
 
 func (m Model) viewBottomBar() string {
+	if m.cmdbar.Prompting() {
+		statusBar := m.renderStatusBarWith(m.cmdbar.PromptStatusBinds())
+		return lipgloss.JoinVertical(lipgloss.Left, m.cmdbar.PromptView(), statusBar)
+	}
 	if m.cmdbar.Active() {
 		statusBar := m.renderStatusBarWith(m.cmdbar.InputStatusBinds())
 		return lipgloss.JoinVertical(lipgloss.Left, m.cmdbar.InputView(), statusBar)

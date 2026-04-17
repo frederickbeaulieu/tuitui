@@ -27,6 +27,15 @@ type FileSelectedMsg struct {
 	Changed  bool
 }
 
+// FileEditRequestMsg asks the app to open the selected file in $EDITOR.
+// Status is the status char from `jj status` ('A', 'M', 'D', 'R', ' ', …)
+// so the app can refuse deletions early.
+type FileEditRequestMsg struct {
+	ChangeID string
+	Path     string
+	Status   string
+}
+
 type FilesCloseMsg struct{}
 
 type filteredFile struct {
@@ -241,6 +250,14 @@ func (m Model) handleNormal(msg tea.KeyPressMsg) (Model, tea.Cmd) {
 			changed := f.Status != " "
 			return m, func() tea.Msg {
 				return FileSelectedMsg{ChangeID: m.changeID, Path: f.Path, Changed: changed}
+			}
+		}
+		return m, nil
+
+	case key.Matches(msg, m.keymap.Edit):
+		if f := m.SelectedFile(); f != nil {
+			return m, func() tea.Msg {
+				return FileEditRequestMsg{ChangeID: m.changeID, Path: f.Path, Status: f.Status}
 			}
 		}
 		return m, nil

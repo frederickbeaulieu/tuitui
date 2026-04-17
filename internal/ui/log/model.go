@@ -35,6 +35,12 @@ type LogToggleMsg struct {
 	ChangeID string
 }
 
+// LogEditMsg is emitted when the user presses `e` on a revision in the
+// log, asking the app to move @ to that revision (`jj edit <id>`).
+type LogEditMsg struct {
+	ChangeID string
+}
+
 type Model struct {
 	runner       *jj.Runner
 	watcher      *jj.RepoWatcher
@@ -221,6 +227,15 @@ func (m Model) handleNormal(msg tea.KeyPressMsg) (Model, tea.Cmd) {
 		if id != "" {
 			return m, func() tea.Msg {
 				return LogSelectMsg{ChangeID: id}
+			}
+		}
+		return m, nil
+
+	case key.Matches(msg, m.keymap.Edit):
+		id := m.SelectedChangeID()
+		if id != "" {
+			return m, func() tea.Msg {
+				return LogEditMsg{ChangeID: id}
 			}
 		}
 		return m, nil

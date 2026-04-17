@@ -45,6 +45,7 @@ func (km KeyMap) StatusBinds(showAll, filtering, hasFilter bool) []key.Help {
 	}
 	binds = append(binds, km.NavigationBinds()...)
 	binds = append(binds, toggle)
+	binds = append(binds, km.Edit.Help())
 
 	if hasFilter {
 		binds = append(binds, key.Help{Key: "esc", Desc: "clear filter"})

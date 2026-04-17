@@ -101,6 +101,55 @@ func parseCompletions(output string) []Completion {
 	return completions
 }
 
+// Edit moves the working copy to changeID via `jj edit`.
+func (r *Runner) Edit(changeID string) error {
+	_, err := r.Run("edit", changeID)
+	return err
+}
+
+// IsImmutable reports whether changeID is immutable according to the
+// repo's immutable_heads() revset. Returns (false, err) on failure.
+func (r *Runner) IsImmutable(changeID string) (bool, error) {
+	out, err := r.Run("log", "-r", changeID, "--no-graph", "-T",
+		`if(self.immutable(), "1", "0")`)
+	if err != nil {
+		return false, err
+	}
+	return strings.TrimSpace(out) == "1", nil
+}
+
+// RepoRoot returns the absolute path to the repo root. If the runner
+// was constructed with an explicit RepoPath it is returned as-is;
+// otherwise `jj root` is consulted.
+func (r *Runner) RepoRoot() (string, error) {
+	if r.RepoPath != "" {
+		return r.RepoPath, nil
+	}
+	out, err := r.Run("root")
+	if err != nil {
+		return "", err
+	}
+	return strings.TrimSpace(out), nil
+}
+
+// ConfigGet returns the value of a jj config key, or "" if unset or on error.
+func (r *Runner) ConfigGet(key string) string {
+	out, err := r.Run("config", "get", key)
+	if err != nil {
+		return ""
+	}
+	return strings.TrimSpace(out)
+}
+
+// CurrentChangeID returns the full change id of @ (the working copy).
+func (r *Runner) CurrentChangeID() (string, error) {
+	out, err := r.Run("log", "-r", "@", "--no-graph", "-T", "change_id")
+	if err != nil {
+		return "", err
+	}
+	return strings.TrimSpace(out), nil
+}
+
 func (r *Runner) run(args ...string) (string, error) {
 	baseArgs := []string{"--no-pager", "--color", "always"}
 	if r.RepoPath != "" {
