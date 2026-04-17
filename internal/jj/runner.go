@@ -36,6 +36,22 @@ func (r *Runner) RunWithColor(args ...string) (string, error) {
 	return r.run(args...)
 }
 
+// InteractiveCmd builds an *exec.Cmd suitable for interactive use
+// (e.g. `jj commit`, `jj describe`, `jj split`, `jj diffedit`).
+//
+// Unlike run(), this does NOT wire stdio to buffers and does NOT force
+// `--color always`; the caller (typically tea.ExecProcess) is expected
+// to attach the real terminal so jj can spawn $EDITOR or its built-in
+// diff editor.
+func (r *Runner) InteractiveCmd(args ...string) *exec.Cmd {
+	baseArgs := []string{"--no-pager"}
+	if r.RepoPath != "" {
+		baseArgs = append(baseArgs, "-R", r.RepoPath)
+	}
+	baseArgs = append(baseArgs, args...)
+	return exec.Command("jj", baseArgs...)
+}
+
 // Complete queries jj's shell completion engine for suggestions.
 func (r *Runner) Complete(words []string, index int) ([]Completion, error) {
 	args := []string{"--", "jj"}

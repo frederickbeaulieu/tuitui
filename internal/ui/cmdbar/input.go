@@ -8,6 +8,7 @@ import (
 	"charm.land/lipgloss/v2"
 	"github.com/charmbracelet/x/ansi"
 
+	"github.com/frederickbeaulieu/tuitui/internal/jj"
 	"github.com/frederickbeaulieu/tuitui/internal/ui/common"
 	"github.com/google/shlex"
 )
@@ -113,12 +114,23 @@ func (m Model) handleSubmit() (Model, tea.Cmd) {
 	}
 	m.completion.visible = false
 	runner := m.runner
-	return m, func() tea.Msg {
-		args, err := shlex.Split(cmd)
-		if err != nil {
+
+	// Parse eagerly so we can decide between interactive and buffered
+	// execution synchronously.
+	args, err := shlex.Split(cmd)
+	if err != nil {
+		return m, func() tea.Msg { return CmdResultMsg{Err: err} }
+	}
+
+	if jj.IsInteractive(args) {
+		c := runner.InteractiveCmd(args...)
+		return m, tea.ExecProcess(c, func(err error) tea.Msg {
 			return CmdResultMsg{Err: err}
-		}
-		_, err = runner.Run(args...)
+		})
+	}
+
+	return m, func() tea.Msg {
+		_, err := runner.Run(args...)
 		return CmdResultMsg{Err: err}
 	}
 }
