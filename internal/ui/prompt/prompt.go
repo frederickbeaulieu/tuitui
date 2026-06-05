@@ -110,17 +110,8 @@ func (m Model) renderBody(baseWidth int) string {
 	const minWidth = 30
 	const maxFraction = 2 // width ≤ baseWidth / maxFraction
 	wantWidth := len(m.message) + 4
-	maxWidth := baseWidth / maxFraction
-	if maxWidth < minWidth {
-		maxWidth = minWidth
-	}
-	w := wantWidth
-	if w > maxWidth {
-		w = maxWidth
-	}
-	if w < minWidth {
-		w = minWidth
-	}
+	maxWidth := max(baseWidth/maxFraction, minWidth)
+	w := max(min(wantWidth, maxWidth), minWidth)
 
 	msgStyle := lipgloss.NewStyle().
 		Foreground(common.ColorText)

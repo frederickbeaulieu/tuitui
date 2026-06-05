@@ -186,10 +186,7 @@ func ghostText(input string, cs completionState) string {
 	if !cs.visible || len(cs.items) == 0 || cursorInQuote(input) {
 		return ""
 	}
-	idx := cs.selected
-	if idx < 0 {
-		idx = 0
-	}
+	idx := max(cs.selected, 0)
 	item := cs.items[idx]
 	partial := currentPartialWord(input)
 	if strings.HasPrefix(item.Value, partial) {

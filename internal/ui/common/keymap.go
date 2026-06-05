@@ -10,8 +10,8 @@ import (
 
 // formatKey converts a key string like "ctrl+u" into "C-u" for display.
 func formatKey(k string) string {
-	if strings.HasPrefix(k, "ctrl+") {
-		return "C-" + strings.TrimPrefix(k, "ctrl+")
+	if after, ok := strings.CutPrefix(k, "ctrl+"); ok {
+		return "C-" + after
 	}
 	return k
 }

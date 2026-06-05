@@ -56,10 +56,7 @@ func (m Model) CompletionHeight(availableHeight int) int {
 	if !m.completion.visible || !m.completion.showDropdown || len(m.completion.items) == 0 {
 		return 0
 	}
-	n := len(m.completion.items)
-	if n > maxVisibleCompletions {
-		n = maxVisibleCompletions
-	}
+	n := min(len(m.completion.items), maxVisibleCompletions)
 	totalHeight := n + 2
 
 	maxAllowed := availableHeight - minPanelHeight

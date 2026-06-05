@@ -58,7 +58,7 @@ func fuzzyMatchEntry(filter string, e jj.GraphEntry) (filteredEntry, bool) {
 	offset := strings.Index(plainText, bestField)
 	displayLen := utf8.RuneCountInString(bestField)
 	if offset < 0 {
-		for _, word := range strings.Fields(plainText) {
+		for word := range strings.FieldsSeq(plainText) {
 			if strings.HasPrefix(bestField, word) {
 				offset = strings.Index(plainText, word)
 				displayLen = utf8.RuneCountInString(word)

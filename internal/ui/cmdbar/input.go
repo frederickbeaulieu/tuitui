@@ -141,8 +141,8 @@ func (m Model) handleTextInput(msg tea.KeyPressMsg) (Model, tea.Cmd) {
 	m.input, c = m.input.Update(msg)
 	newValue := m.input.Value()
 
-	if strings.HasPrefix(newValue, "jj ") {
-		newValue = strings.TrimPrefix(newValue, "jj ")
+	if after, ok := strings.CutPrefix(newValue, "jj "); ok {
+		newValue = after
 		m.input.SetValue(newValue)
 		m.input.SetCursor(len(newValue))
 	}

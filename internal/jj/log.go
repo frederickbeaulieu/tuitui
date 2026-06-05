@@ -128,8 +128,8 @@ func splitNoGraphEntries(output string, commits []Commit) [][]string {
 	return splitByRevision(output, func(line string) bool {
 		plain := ansi.Strip(line)
 		firstWord := plain
-		if sp := strings.IndexByte(plain, ' '); sp != -1 {
-			firstWord = plain[:sp]
+		if before, _, ok := strings.Cut(plain, " "); ok {
+			firstWord = before
 		}
 		return matchesChangeID(firstWord, fullIDs)
 	})
@@ -185,16 +185,16 @@ func isNodeGlyph(r rune) bool {
 func parseGraphLogOutput(output string) []Commit {
 	var commits []Commit
 	for line := range strings.SplitSeq(strings.TrimSpace(output), "\n") {
-		tab := strings.IndexByte(line, '\t')
-		if tab == -1 {
+		before, after, ok := strings.Cut(line, "\t")
+		if !ok {
 			continue
 		}
 		// Strip graph prefix by finding the changeID before the first tab.
-		prefix := line[:tab]
+		prefix := before
 		lastSpace := strings.LastIndexByte(prefix, ' ')
 		changeID := prefix[lastSpace+1:]
 
-		fields := append([]string{changeID}, strings.Split(line[tab+1:], "\t")...)
+		fields := append([]string{changeID}, strings.Split(after, "\t")...)
 		if commit, ok := commitFromFields(fields); ok {
 			commits = append(commits, commit)
 		}
