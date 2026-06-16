@@ -23,7 +23,7 @@ The name and logo are inspired by the [tui](<https://en.wikipedia.org/wiki/Tui_(
 ## Features
 
 - **Graph log** — displays the jj commit graph with full DAG structure, colors, and working copy indicator; fuzzy filtering by change ID, description, bookmarks, or tags
-- **File browser** — lists changed files per revision with status indicators (A/M/D/R), conflict markers, fuzzy filtering, and toggle between changed/all files
+- **File browser** — lists changed files per revision with status indicators (A/M/D/R), conflict markers, fuzzy filtering, toggle between changed/all files, and switch revision (`J`/`K`) without leaving the panel
 - **Diff panel** — shows syntax-highlighted diffs piped through [delta](https://github.com/dandavison/delta), with side-by-side and inline layouts; plain file view with syntax highlighting via [chroma](https://github.com/alecthomas/chroma)
 - **Command bar** — run any jj command with `:`; includes dynamic completion powered by jj's built-in shell completion engine, ghost text, and a navigable suggestions dropdown
 - **Error viewer** — failed jj commands display their output in a full-screen, scrollable panel
@@ -148,11 +148,12 @@ tuitui --help
 
 ### File browser
 
-| Key   | Action                        |
-| ----- | ----------------------------- |
-| `z`   | Toggle all files/changed only |
-| `/`   | Fuzzy filter files            |
-| `esc` | Clear filter                  |
+| Key     | Action                        |
+| ------- | ----------------------------- |
+| `J`/`K` | Older/newer revision          |
+| `z`     | Toggle all files/changed only |
+| `/`     | Fuzzy filter files            |
+| `esc`   | Clear filter                  |
 
 ### Diff panel
 
