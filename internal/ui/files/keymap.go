@@ -10,6 +10,8 @@ type KeyMap struct {
 	common.KeyMap
 	ToggleAllFiles key.Binding
 	Filter         key.Binding
+	OlderRevision  key.Binding
+	NewerRevision  key.Binding
 }
 
 func DefaultKeyMap() KeyMap {
@@ -22,6 +24,14 @@ func DefaultKeyMap() KeyMap {
 		Filter: key.NewBinding(
 			key.WithKeys("/"),
 			key.WithHelp("/", "filter"),
+		),
+		OlderRevision: key.NewBinding(
+			key.WithKeys("J"),
+			key.WithHelp("J", "older rev"),
+		),
+		NewerRevision: key.NewBinding(
+			key.WithKeys("K"),
+			key.WithHelp("K", "newer rev"),
 		),
 	}
 }
@@ -44,6 +54,7 @@ func (km KeyMap) StatusBinds(showAll, filtering, hasFilter bool) []key.Help {
 		km.Open.Help(),
 	}
 	binds = append(binds, km.NavigationBinds()...)
+	binds = append(binds, key.Help{Key: "J/K", Desc: "change rev"})
 	binds = append(binds, toggle)
 	binds = append(binds, km.Edit.Help())
 

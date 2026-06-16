@@ -91,6 +91,20 @@ func (m Model) SelectedChangeID() string {
 	return entries[m.cursor].Commit.ChangeID
 }
 
+// MoveCursor moves the selection by delta entries (negative = toward newer,
+// positive = toward older), clamped to the visible range. It returns a command
+// notifying listeners when the selected revision actually changes, or nil when
+// there is nothing to move to.
+func (m *Model) MoveCursor(delta int) tea.Cmd {
+	maxCursor := m.visibleCount() - 1
+	if maxCursor < 0 {
+		return nil
+	}
+	m.cursor = common.Clamp(m.cursor+delta, 0, maxCursor)
+	m.ensureVisible()
+	return m.notifyCursorChanged()
+}
+
 func (m Model) ShowAll() bool { return m.showAll }
 
 func (m Model) StatusBinds() []key.Help {

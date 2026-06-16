@@ -126,6 +126,10 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m.handleEditFinished(msg)
 	case prompt.ResultMsg:
 		return m.handlePromptResult(msg)
+	case files.ChangeRevisionMsg:
+		if m.mode == modeFiles {
+			cmds = appendCmd(cmds, m.log.MoveCursor(msg.Delta))
+		}
 	case files.FilesCloseMsg:
 		return m.handleFilesClose()
 	case diff.DiffCloseMsg:

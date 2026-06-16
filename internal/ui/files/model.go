@@ -38,6 +38,13 @@ type FileEditRequestMsg struct {
 
 type FilesCloseMsg struct{}
 
+// ChangeRevisionMsg asks the app to move the log selection by Delta entries
+// (negative = toward newer, positive = toward older). The app re-points this
+// panel at the new revision via SetRevision, keeping the log highlight in sync.
+type ChangeRevisionMsg struct {
+	Delta int
+}
+
 type filteredFile struct {
 	file           jj.FileChange
 	matchedIndexes []int
@@ -261,6 +268,16 @@ func (m Model) handleNormal(msg tea.KeyPressMsg) (Model, tea.Cmd) {
 			}
 		}
 		return m, nil
+
+	case key.Matches(msg, m.keymap.NewerRevision):
+		return m, func() tea.Msg {
+			return ChangeRevisionMsg{Delta: -1}
+		}
+
+	case key.Matches(msg, m.keymap.OlderRevision):
+		return m, func() tea.Msg {
+			return ChangeRevisionMsg{Delta: 1}
+		}
 
 	case key.Matches(msg, m.keymap.Back):
 		return m, func() tea.Msg {
